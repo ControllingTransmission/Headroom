@@ -51,18 +51,16 @@ fi
 KOKORO_INSTALLED=false
 KOKORO_PATH=""
 
-# Check if the Kokoro repo is present in the current directory
-if [ -d "./kokoro" ]; then
-  KOKORO_INSTALLED=true
-  KOKORO_PATH="python3 -m kokoro.serve"
-  echo -e "${GREEN}✓ Kokoro TTS repository is found${NC}"
-  
-  # Check if we need to set up a Python virtual environment for Kokoro
-  if [ ! -d "./kokoro_env" ]; then
-    echo -e "${YELLOW}Setting up Python virtual environment for Kokoro...${NC}"
-    python3 -m venv kokoro_env
-    # We won't actually install Kokoro here due to potential dependency issues
-    # Users should follow the official Kokoro installation instructions
+# Check if the virtual environment for Kokoro exists
+if [ -d "./kokoro_env" ]; then
+  # Check if run_kokoro.py exists
+  if [ -f "./run_kokoro.py" ]; then
+    KOKORO_INSTALLED=true
+    KOKORO_PATH="./run_kokoro.py"
+    echo -e "${GREEN}✓ Kokoro TTS is found with new server implementation${NC}"
+  else
+    echo -e "${YELLOW}⚠ Kokoro TTS virtual environment found but missing run_kokoro.py script.${NC}"
+    echo -e "${YELLOW}  Will use browser's built-in TTS.${NC}"
   fi
 else
   # Check common paths where Kokoro might be installed
@@ -86,7 +84,7 @@ else
     echo -e "${GREEN}✓ Kokoro TTS is installed${NC}"
   else
     echo -e "${YELLOW}⚠ Kokoro TTS is not found. Will use browser's built-in TTS.${NC}"
-    echo -e "${YELLOW}  To install Kokoro, visit: https://github.com/hexgrad/kokoro${NC}"
+    echo -e "${YELLOW}  To install Kokoro, run: ./start_kokoro.sh${NC}"
   fi
 fi
 
@@ -130,22 +128,28 @@ fi
 # Start Kokoro if installed and not already running
 if $KOKORO_INSTALLED; then
   echo -e "${BOLD}Starting Kokoro TTS server...${NC}"
-  if is_process_running "kokoro"; then
+  if is_process_running "run_kokoro.py"; then
     echo -e "${GREEN}✓ Kokoro TTS server is already running${NC}"
   else
     echo -e "${BLUE}Starting Kokoro TTS server...${NC}"
     
-    # Check if we're using the kokoro repository
-    if [[ "$KOKORO_PATH" == *"python3 -m kokoro.serve"* ]]; then
-      echo -e "${YELLOW}Using Kokoro from the repository${NC}"
-      # We would need to activate the virtual environment and use the Python module
-      echo -e "${YELLOW}⚠ Kokoro requires proper installation to function.${NC}"
-      echo -e "${YELLOW}  Please follow the instructions at: https://github.com/hexgrad/kokoro${NC}"
-      echo -e "${YELLOW}  Install with: pip install kokoro${NC}"
-      echo -e "${YELLOW}  Falling back to browser TTS.${NC}"
-      KOKORO_INSTALLED=false
+    # Check if we're using the new run_kokoro.py script
+    if [[ "$KOKORO_PATH" == *"run_kokoro.py"* ]]; then
+      # Activate the virtual environment and run the script in non-interactive mode
+      source kokoro_env/bin/activate
+      python "$KOKORO_PATH" --no-interactive &
+      KOKORO_PID=$!
+      deactivate
+      sleep 2
+      
+      if is_process_running "run_kokoro.py"; then
+        echo -e "${GREEN}✓ Kokoro TTS server started successfully${NC}"
+      else
+        echo -e "${RED}Failed to start Kokoro TTS server. Will fall back to browser TTS.${NC}"
+        KOKORO_INSTALLED=false
+      fi
     else
-      # Start Kokoro in the background
+      # Start Kokoro in the background using the old method
       "$KOKORO_PATH" serve &
       KOKORO_PID=$!
       sleep 2

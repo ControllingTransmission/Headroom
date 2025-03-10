@@ -3,6 +3,30 @@
 # Script to set up and launch the Kokoro TTS server
 # This script requires Python 3.10-3.12 installed on your system
 
+# Parse command line arguments
+NON_INTERACTIVE=false
+LANGUAGE_CHOICE="4"  # Default to no additional languages
+
+while [ "$#" -gt 0 ]; do
+  case "$1" in
+    --non-interactive)
+      NON_INTERACTIVE=true
+      shift 1
+      ;;
+    --lang)
+      LANGUAGE_CHOICE="$2"
+      shift 2
+      ;;
+    *)
+      echo "Unknown option: $1"
+      echo "Usage: $0 [--non-interactive] [--lang <1-4>]"
+      echo "  --non-interactive  Run without interactive prompts"
+      echo "  --lang <1-4>       Language support: 1=Japanese, 2=Chinese, 3=Both, 4=None (default)"
+      exit 1
+      ;;
+  esac
+done
+
 # ANSI color codes
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
@@ -77,16 +101,18 @@ else
     echo -e "${GREEN}✓ Kokoro is already installed${NC}"
 fi
 
-# Ask about additional language support
-echo
-echo -e "${BOLD}Do you want to install additional language support?${NC}"
-echo -e "${YELLOW}1. Japanese (misaki[ja])${NC}"
-echo -e "${YELLOW}2. Chinese (misaki[zh])${NC}"
-echo -e "${YELLOW}3. Both Japanese and Chinese${NC}"
-echo -e "${YELLOW}4. None (only English and basic languages)${NC}"
-read -p "Enter your choice (1-4): " language_choice
+# Ask about additional language support if in interactive mode
+if [ "$NON_INTERACTIVE" = false ]; then
+    echo
+    echo -e "${BOLD}Do you want to install additional language support?${NC}"
+    echo -e "${YELLOW}1. Japanese (misaki[ja])${NC}"
+    echo -e "${YELLOW}2. Chinese (misaki[zh])${NC}"
+    echo -e "${YELLOW}3. Both Japanese and Chinese${NC}"
+    echo -e "${YELLOW}4. None (only English and basic languages)${NC}"
+    read -p "Enter your choice (1-4): " LANGUAGE_CHOICE
+fi
 
-case $language_choice in
+case $LANGUAGE_CHOICE in
     1)
         echo -e "${BLUE}Installing Japanese language support...${NC}"
         pip install "misaki[ja]"
@@ -110,8 +136,24 @@ echo -e "${YELLOW}The server will run on http://localhost:8008 by default.${NC}"
 echo -e "${YELLOW}Press Ctrl+C to stop the server.${NC}"
 echo
 
-# Start the Kokoro server
-python -m kokoro.serve
+# Check if run_kokoro.py exists
+if [ -f "run_kokoro.py" ]; then
+    # Make sure the script is executable
+    chmod +x run_kokoro.py
+    
+    # Start the Kokoro server using the new script
+    # Pass the --no-interactive flag if we're in non-interactive mode
+    if [ "$NON_INTERACTIVE" = true ]; then
+        python run_kokoro.py --no-interactive
+    else
+        python run_kokoro.py
+    fi
+else
+    echo -e "${RED}Error: run_kokoro.py not found.${NC}"
+    echo -e "${YELLOW}Please make sure the run_kokoro.py script exists in the current directory.${NC}"
+    deactivate
+    exit 1
+fi
 
 # Deactivate virtual environment when done
 deactivate
