@@ -1,0 +1,79 @@
+# Headroom
+
+Headroom is an experimental local voice chatbot.
+
+## App Experience
+
+Users will open a local HTML file in a web browser to engage in text and/or voice conversations with the AI chatbot. 
+User input can be via:
+
+- **Keyboard input**: Typed into a text field
+- **Speech input**: Using the laptop's microphone with speech-to-text
+
+Chatbot output includes:
+
+- **Text response**: Displayed on the screen
+- **Audio response**: Delivered through text-to-speech
+
+## Architecture
+
+- A web browser on a laptop or desktop communicates with local servers running on the same machine.
+- Local servers include:
+  - **Chatbot LLM**: e.g., Ollama running Qwen 32B
+  - **Speech-to-Text (STT) server**
+  - **Text-to-Speech (TTS) server**
+
+## Development Plan
+
+- **Start with setting up the Ollama chat server**
+  - Install Ollama on your local machine.
+  - Configure the Qwen 32B model.
+  - Test server connectivity and basic chat functionality.
+
+- **Get text input and text responses working with the chat server**
+  - **Develop the frontend HTML interface**
+    - Create a text input field for user queries.
+    - Design a display area for chatbot responses.
+  - **Implement communication between frontend and Ollama chat server**
+    - Set up HTTP/WebSocket connections.
+    - Handle sending user input to the chat server.
+    - Receive and display chatbot responses in the frontend.
+
+- **Get TTS server working for output**
+  - Install and configure a Text-to-Speech (TTS) server (e.g., eSpeak, Google TTS).
+  - Integrate the TTS server with the chatbot response pipeline.
+    - Convert text responses from the chatbot into audio.
+  - Ensure audio playback functionality in the web browser.
+    - Implement audio controls (play, pause, stop).
+
+- **Get STT working for continuous input**
+  - Install and configure a Speech-to-Text (STT) server (e.g., Vosk, DeepSpeech).
+  - Implement a streaming connection between the web frontend and the STT server.
+    - Capture continuous audio input from the user's microphone.
+    - Stream audio data to the STT server for real-time transcription.
+  - Convert transcribed text into chatbot input and handle responses.
+
+- **Integrate all components**
+  - Ensure seamless interaction between STT, chat server, and TTS.
+  - Handle error cases and provide fallback mechanisms.
+  - Optimize performance for real-time communication.
+
+- **User Interface Enhancements**
+  - Add voice input controls (e.g., start, stop recording).
+  - Provide visual feedback for listening and processing states.
+  - Improve UI/UX for better user interaction and accessibility.
+
+- **Testing and Debugging**
+  - Conduct unit tests for each individual component (STT, chat server, TTS).
+  - Perform integration testing to ensure all components work together smoothly.
+  - Identify and fix bugs, optimize latency and response times.
+
+- **Deployment and Documentation**
+  - Package the local servers and frontend for easy installation.
+  - Write comprehensive user documentation for setup and usage.
+  - Create troubleshooting guides and FAQs to assist users.
+
+- **Future Enhancements**
+  - Implement additional features like conversation history.
+  - Explore support for multiple languages.
+  - Enhance security and privacy measures for local data handling.
