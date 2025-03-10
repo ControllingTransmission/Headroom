@@ -14,9 +14,9 @@ document.addEventListener('DOMContentLoaded', () => {
   const MODEL = window.HEADROOM_CONFIG.OLLAMA.model;
   const SYSTEM_PROMPT = window.HEADROOM_CONFIG.OLLAMA.systemPrompt;
   
-  // TTS configuration
-  let ttsEnabled = window.HEADROOM_CONFIG.TTS.enabled;
-  const TTS_URL = window.HEADROOM_CONFIG.TTS.url;
+  // Initialize TTS handler
+  const ttsHandler = new TTSHandler(window.HEADROOM_CONFIG.TTS);
+  let ttsEnabled = ttsHandler.enabled;
   
   // Store conversation history
   let conversationHistory = [
@@ -36,13 +36,148 @@ document.addEventListener('DOMContentLoaded', () => {
   // Toggle TTS functionality
   const toggleAudioBtn = document.getElementById('toggle-audio-button');
   toggleAudioBtn.addEventListener('click', () => {
-    ttsEnabled = !ttsEnabled;
+    ttsEnabled = ttsHandler.setEnabled(!ttsEnabled);
     toggleAudioBtn.textContent = ttsEnabled ? 'Disable Audio Response' : 'Enable Audio Response';
     
     if (ttsEnabled) {
-      addMessageToChat('Audio responses enabled. Note: This feature requires a TTS server to be running locally.', 'bot');
+      const message = 'Audio responses enabled. Using browser built-in speech synthesis.';
+      addMessageToChat(message, 'bot');
+      // Speak the confirmation message
+      ttsHandler.speak(message);
     } else {
       addMessageToChat('Audio responses disabled.', 'bot');
+    }
+  });
+  
+  // Settings panel functionality
+  const settingsButton = document.getElementById('settings-button');
+  const settingsPanel = document.getElementById('settings-panel');
+  const closeSettingsButton = document.getElementById('close-settings-button');
+  const voiceSelect = document.getElementById('voice-select');
+  const rateSlider = document.getElementById('rate-slider');
+  const pitchSlider = document.getElementById('pitch-slider');
+  const volumeSlider = document.getElementById('volume-slider');
+  const rateValue = document.getElementById('rate-value');
+  const pitchValue = document.getElementById('pitch-value');
+  const volumeValue = document.getElementById('volume-value');
+  const testVoiceButton = document.getElementById('test-voice-button');
+  
+  // Initialize voice settings
+  function initializeVoiceSettings() {
+    // Populate voice select dropdown for TTS
+    const voices = ttsHandler.getVoices();
+    if (voices.length > 0) {
+      voiceSelect.innerHTML = '';
+      voices.forEach((voice, index) => {
+        const option = document.createElement('option');
+        option.value = index;
+        option.textContent = `${voice.name} (${voice.lang})`;
+        if (voice === ttsHandler.voice) {
+          option.selected = true;
+        }
+        voiceSelect.appendChild(option);
+      });
+    }
+    
+    // Set slider values from TTS handler
+    rateSlider.value = ttsHandler.rate;
+    pitchSlider.value = ttsHandler.pitch;
+    volumeSlider.value = ttsHandler.volume;
+    
+    // Update displayed values
+    rateValue.textContent = ttsHandler.rate.toFixed(1);
+    pitchValue.textContent = ttsHandler.pitch.toFixed(1);
+    volumeValue.textContent = ttsHandler.volume.toFixed(1);
+    
+    // Populate STT language dropdown
+    const sttLanguageSelect = document.getElementById('stt-language-select');
+    const languages = SpeechHandler.getSupportedLanguages();
+    if (languages.length > 0) {
+      sttLanguageSelect.innerHTML = '';
+      languages.forEach(lang => {
+        const option = document.createElement('option');
+        option.value = lang.code;
+        option.textContent = lang.name;
+        if (speechHandler && lang.code === speechHandler.language) {
+          option.selected = true;
+        }
+        sttLanguageSelect.appendChild(option);
+      });
+    }
+    
+    // Set continuous mode checkbox
+    const continuousCheckbox = document.getElementById('continuous-checkbox');
+    if (speechHandler) {
+      continuousCheckbox.checked = speechHandler.continuous;
+    }
+    
+    // Display current model
+    const modelNameDisplay = document.getElementById('model-name-display');
+    modelNameDisplay.textContent = MODEL;
+  }
+  
+  // Settings panel event listeners
+  settingsButton.addEventListener('click', () => {
+    initializeVoiceSettings();
+    settingsPanel.style.display = 'block';
+  });
+  
+  closeSettingsButton.addEventListener('click', () => {
+    settingsPanel.style.display = 'none';
+  });
+  
+  voiceSelect.addEventListener('change', () => {
+    const selectedIndex = parseInt(voiceSelect.value);
+    ttsHandler.setVoice(selectedIndex);
+  });
+  
+  rateSlider.addEventListener('input', () => {
+    const value = parseFloat(rateSlider.value);
+    ttsHandler.setRate(value);
+    rateValue.textContent = value.toFixed(1);
+  });
+  
+  pitchSlider.addEventListener('input', () => {
+    const value = parseFloat(pitchSlider.value);
+    ttsHandler.setPitch(value);
+    pitchValue.textContent = value.toFixed(1);
+  });
+  
+  volumeSlider.addEventListener('input', () => {
+    const value = parseFloat(volumeSlider.value);
+    ttsHandler.setVolume(value);
+    volumeValue.textContent = value.toFixed(1);
+  });
+  
+  testVoiceButton.addEventListener('click', () => {
+    ttsHandler.speak('This is a test of the current voice settings. Hello, I am Headroom!');
+  });
+  
+  // STT settings event listeners
+  const sttLanguageSelect = document.getElementById('stt-language-select');
+  sttLanguageSelect.addEventListener('change', () => {
+    if (speechHandler) {
+      const selectedLanguage = sttLanguageSelect.value;
+      speechHandler.setLanguage(selectedLanguage);
+      
+      // If currently listening, restart recognition with new language
+      if (speechHandler.isListening) {
+        speechHandler.stopListening();
+        setTimeout(() => speechHandler.startListening(), 300);
+      }
+    }
+  });
+  
+  const continuousCheckbox = document.getElementById('continuous-checkbox');
+  continuousCheckbox.addEventListener('change', () => {
+    if (speechHandler) {
+      speechHandler.continuous = continuousCheckbox.checked;
+      
+      // If currently listening, restart recognition with new setting
+      if (speechHandler.isListening) {
+        speechHandler.stopListening();
+        setTimeout(() => speechHandler.startListening(), 300);
+      }
     }
   });
   
@@ -52,45 +187,84 @@ document.addEventListener('DOMContentLoaded', () => {
   let currentTranscript = '';
   
   // Initialize speech handler if Web Speech API is available
-  if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
+  if (SpeechHandler.isSupported()) {
     voiceInputButton.removeAttribute('disabled');
     
-    // Handle speech recognition results
+    // Handle final speech recognition results
     const handleSpeechResult = (transcript) => {
       currentTranscript = transcript;
       transcriptPreview.textContent = transcript;
+      
+      // Automatically send message when done speaking
+      if (transcript.trim()) {
+        messageInput.value = transcript.trim();
+      }
+    };
+    
+    // Handle interim speech recognition results (while still speaking)
+    const handleInterimResult = (transcript) => {
+      currentTranscript = transcript;
+      transcriptPreview.textContent = transcript;
+    };
+    
+    // Handle speech recognition start
+    const handleSpeechStart = () => {
+      sttEnabled = true;
+      voiceInputButton.textContent = 'Disable Voice Input';
+      voiceStatusDiv.style.display = 'block';
+      currentTranscript = '';
+      transcriptPreview.textContent = '';
+    };
+    
+    // Handle speech recognition stop
+    const handleSpeechStop = () => {
+      sttEnabled = false;
+      voiceInputButton.textContent = 'Enable Voice Input';
+      voiceStatusDiv.style.display = 'none';
+      
+      // If we have a transcript, send it
+      if (currentTranscript.trim()) {
+        sendMessage();
+      }
     };
     
     // Handle speech recognition errors
     const handleSpeechError = (message, error) => {
       console.error(message, error);
-      addMessageToChat(`Speech recognition error: ${error}`, 'bot');
+      
+      // Only show user-facing errors in the chat
+      if (typeof error === 'string' && (
+        error.includes('denied') || 
+        error.includes('network') || 
+        error === 'not-allowed'
+      )) {
+        addMessageToChat(`Speech recognition error: ${error}`, 'bot');
+      }
     };
     
-    // Create speech handler
-    speechHandler = new SpeechHandler(handleSpeechResult, handleSpeechError);
+    // Create speech handler with all callbacks
+    speechHandler = new SpeechHandler(
+      window.HEADROOM_CONFIG.STT,
+      handleSpeechResult,
+      handleInterimResult,
+      handleSpeechStart,
+      handleSpeechStop,
+      handleSpeechError
+    );
     
     // Toggle voice input
     voiceInputButton.addEventListener('click', () => {
       if (!speechHandler) return;
+      speechHandler.toggleListening();
       
-      const isListening = speechHandler.toggleListening();
-      sttEnabled = isListening;
-      
-      voiceInputButton.textContent = isListening ? 'Disable Voice Input' : 'Enable Voice Input';
-      voiceStatusDiv.style.display = isListening ? 'block' : 'none';
-      
-      if (isListening) {
-        currentTranscript = '';
-        transcriptPreview.textContent = '';
+      if (!sttEnabled) {
+        // If we're enabling voice input, show a helpful message
         addMessageToChat('Voice input enabled. Speak into your microphone.', 'bot');
       } else {
-        if (currentTranscript.trim()) {
-          // Submit the final transcript as a user message
-          messageInput.value = currentTranscript.trim();
-          sendMessage();
+        // If we're disabling voice input, show a message only if we didn't already send a message
+        if (!currentTranscript.trim()) {
+          addMessageToChat('Voice input disabled.', 'bot');
         }
-        addMessageToChat('Voice input disabled.', 'bot');
       }
     });
   } else {
@@ -145,7 +319,7 @@ document.addEventListener('DOMContentLoaded', () => {
     } catch (error) {
       // Remove typing indicator and show error message
       removeTypingIndicator(typingIndicator);
-      const errorMessage = 'Sorry, I encountered an error connecting to the chat server. Please make sure Ollama is running locally with the Qwen 32B model.';
+      const errorMessage = `Sorry, I encountered an error connecting to the chat server. Please make sure Ollama is running locally with the ${MODEL} model.`;
       addMessageToChat(errorMessage, 'bot');
       conversationHistory.push({ role: 'assistant', content: errorMessage });
       console.error('Error:', error);
@@ -191,35 +365,11 @@ document.addEventListener('DOMContentLoaded', () => {
     addMessageToChat('Hello! I\'m Headroom. How can I assist you today?', 'bot');
   }
   
-  // Function to speak text using TTS (placeholder for future implementation)
+  // Function to speak text using TTS
   async function speakText(text) {
     if (!ttsEnabled) return;
     
-    try {
-      // This is a placeholder for the actual TTS API call
-      console.log('TTS would speak:', text);
-      
-      // In the future, this will be replaced with actual TTS API call:
-      // const response = await fetch(TTS_URL, {
-      //   method: 'POST',
-      //   headers: { 'Content-Type': 'application/json' },
-      //   body: JSON.stringify({ text })
-      // });
-      // 
-      // if (response.ok) {
-      //   const audioBlob = await response.blob();
-      //   const audioUrl = URL.createObjectURL(audioBlob);
-      //   const audio = new Audio(audioUrl);
-      //   audio.play();
-      // }
-      
-      // For now, use browser's built-in speech synthesis as a fallback demo
-      if ('speechSynthesis' in window) {
-        const utterance = new SpeechSynthesisUtterance(text);
-        window.speechSynthesis.speak(utterance);
-      }
-    } catch (error) {
-      console.error('TTS error:', error);
-    }
+    // Use our TTS handler class
+    return ttsHandler.speak(text);
   }
 });

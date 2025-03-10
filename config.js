@@ -3,7 +3,7 @@
 // Ollama chat server configuration
 const OLLAMA_CONFIG = {
   url: 'http://localhost:11434/api/chat',
-  model: 'qwen:32b',  // The model name to use
+  model: 'huihui_ai/qwen2.5-abliterate:32b',  // The model name to use
   systemPrompt: 'You are a helpful and friendly AI assistant called Headroom. Keep your responses concise and informative.'
 };
 

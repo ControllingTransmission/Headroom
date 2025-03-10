@@ -102,6 +102,7 @@
     <button id="voice-input-button">Enable Voice Input</button>
     <button id="toggle-audio-button">Enable Audio Response</button>
     <button id="reset-button">New Conversation</button>
+    <button id="settings-button">Settings</button>
   </div>
   
   <div id="voice-status" style="margin-top: 10px; text-align: center; display: none;">
@@ -109,8 +110,96 @@
     <div id="transcript-preview" style="font-style: italic; margin-top: 5px; color: #666;"></div>
   </div>
   
+  <!-- Settings Panel -->
+  <div id="settings-panel" style="display: none; margin-top: 15px; padding: 15px; border: 1px solid #ddd; border-radius: 8px;">
+    <div style="display: flex; justify-content: space-between; margin-bottom: 15px;">
+      <h3 style="margin: 0;">Settings</h3>
+      <div>
+        <button id="close-settings-button">Close</button>
+      </div>
+    </div>
+    
+    <div style="display: flex; gap: 20px; flex-wrap: wrap;">
+      <!-- Speech Output Settings -->
+      <div style="flex: 1; min-width: 300px;">
+        <h4>Voice Output Settings</h4>
+        
+        <div style="margin-bottom: 15px;">
+          <label for="voice-select">Voice:</label>
+          <select id="voice-select" style="margin-left: 10px; padding: 5px; width: 250px;">
+            <option value="">Loading voices...</option>
+          </select>
+        </div>
+        
+        <div style="margin-bottom: 15px; display: flex; align-items: center;">
+          <label for="rate-slider">Speed:</label>
+          <input type="range" id="rate-slider" min="0.5" max="2" step="0.1" value="1" style="margin: 0 10px; width: 150px;">
+          <span id="rate-value">1.0</span>
+        </div>
+        
+        <div style="margin-bottom: 15px; display: flex; align-items: center;">
+          <label for="pitch-slider">Pitch:</label>
+          <input type="range" id="pitch-slider" min="0.5" max="2" step="0.1" value="1" style="margin: 0 10px; width: 150px;">
+          <span id="pitch-value">1.0</span>
+        </div>
+        
+        <div style="margin-bottom: 15px; display: flex; align-items: center;">
+          <label for="volume-slider">Volume:</label>
+          <input type="range" id="volume-slider" min="0" max="1" step="0.1" value="1" style="margin: 0 10px; width: 150px;">
+          <span id="volume-value">1.0</span>
+        </div>
+        
+        <button id="test-voice-button">Test Voice</button>
+      </div>
+      
+      <!-- Speech Input Settings -->
+      <div style="flex: 1; min-width: 300px;">
+        <h4>Voice Input Settings</h4>
+        
+        <div style="margin-bottom: 15px;">
+          <label for="stt-language-select">Recognition Language:</label>
+          <select id="stt-language-select" style="margin-left: 10px; padding: 5px; width: 200px;">
+            <option value="">Loading languages...</option>
+          </select>
+        </div>
+        
+        <div style="margin-bottom: 15px; display: flex; align-items: center;">
+          <label for="continuous-checkbox">Continuous Mode:</label>
+          <input type="checkbox" id="continuous-checkbox" checked style="margin-left: 10px;">
+          <span style="margin-left: 5px; font-size: 0.8em; color: #666;">(Recognition stays active after detecting speech)</span>
+        </div>
+        
+        <div style="margin-bottom: 15px;">
+          <p style="margin: 5px 0; font-size: 0.9em;">Voice input tips:</p>
+          <ul style="margin: 5px 0; font-size: 0.8em; color: #666;">
+            <li>Speak clearly and at a normal pace</li>
+            <li>Use proper punctuation by saying "comma", "period", etc.</li>
+            <li>Background noise may affect recognition quality</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Chat Model Settings -->
+    <div style="margin-top: 20px;">
+      <h4>Chat Model Settings</h4>
+      
+      <div style="margin-bottom: 15px;">
+        <label for="model-name-display">Current Model:</label>
+        <span id="model-name-display" style="margin-left: 10px; font-family: monospace;"></span>
+      </div>
+      
+      <div style="margin-bottom: 15px;">
+        <p style="margin: 5px 0; font-size: 0.9em; color: #666;">
+          To change the model, edit the config.js file or use Ollama CLI commands.
+        </p>
+      </div>
+    </div>
+  </div>
+  
   <script src="config.js"></script>
   <script src="speech.js"></script>
+  <script src="tts.js"></script>
   <script src="app.js"></script>
 </body>
 </html>

@@ -55,5 +55,5 @@ server.listen(PORT, () => {
   console.log(`Server running at http://localhost:${PORT}/`);
   console.log('To use Headroom:');
   console.log(`1. Open http://localhost:${PORT}/ in your browser`);
-  console.log('2. Make sure Ollama is running with the Qwen 32B model');
+  console.log('2. Make sure Ollama is running with the huihui_ai/qwen2.5-abliterate:32b model');
 });

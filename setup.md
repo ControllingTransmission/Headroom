@@ -17,15 +17,15 @@ Follow the instructions at [ollama.ai](https://ollama.ai/) to install Ollama for
 - **Linux**: Follow the curl installation command
 - **Windows**: Follow the Windows installation instructions
 
-### 2. Pull the Qwen 32B Model
+### 2. Pull the Required Model
 
 Once Ollama is installed, open a terminal and run:
 
 ```bash
-ollama pull qwen:32b
+ollama pull huihui_ai/qwen2.5-abliterate:32b
 ```
 
-This will download the Qwen 32B model, which might take some time depending on your internet connection and hardware.
+This will download the required model, which might take some time depending on your internet connection and hardware.
 
 ### 3. Start the Ollama Server
 
@@ -67,18 +67,41 @@ Using the Node.js server is recommended as it avoids potential CORS issues with 
 
 ## Usage
 
+### Text Chat
 1. Type your message in the text input field
 2. Press Enter or click the Send button to send your message
 3. Wait for the response from the chatbot
 
+### Voice Input
+1. Click the "Enable Voice Input" button
+2. Speak clearly into your microphone
+3. The app will transcribe your speech in real-time
+4. When you finish speaking, the message will be sent automatically
+5. Click "Disable Voice Input" to turn off voice recognition
+
+### Voice Output
+1. Click the "Enable Audio Response" button
+2. The chatbot's responses will be spoken aloud using your device's speech synthesis
+3. Click "Disable Audio Response" to turn off voice output
+
+### Settings
+Click the "Settings" button to adjust:
+- Voice selection, speed, pitch, and volume for speech output
+- Language selection for speech recognition
+- Continuous mode for speech recognition
+
 ## Troubleshooting
 
 - **No response from chat**: Ensure Ollama is running with `ollama serve` in your terminal
-- **Model not found**: Make sure you've pulled the Qwen 32B model with `ollama pull qwen:32b`
+- **Model not found**: Make sure you've pulled the required model with `ollama pull huihui_ai/qwen2.5-abliterate:32b`
 - **Connection error**: Check that no firewall is blocking localhost connections
+- **Voice input not working**: Check that your browser has permission to access your microphone
+- **Voice output not working**: Check that your browser has audio output enabled and volume is not muted
 
 ## Future Features
 
-- Voice input (speech-to-text)
-- Audio output (text-to-speech)
+- Enhanced voice input with custom STT server
+- Advanced text-to-speech with custom TTS server 
 - Persistent conversation history
+- Multiple language models support
+- Mobile-friendly responsive design
