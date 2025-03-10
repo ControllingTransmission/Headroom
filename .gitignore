@@ -22,3 +22,9 @@ Thumbs.db
 # TTS/STT server models and data
 models/
 audio_cache/
+voices/
+kokoro_env/
+
+# Koroko test output files
+test_get.wav
+test_post.wav
