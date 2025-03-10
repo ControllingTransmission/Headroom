@@ -11,10 +11,11 @@ Headroom is a web-based chatbot interface that leverages local language models t
 - **Text Chat**: Interact with the AI through a familiar chat interface
 - **Voice Input**: Use your microphone for hands-free interaction
 - **Voice Output**: Listen to AI responses with text-to-speech
+- **Kokoro TTS**: High-quality Text-to-Speech with multiple voice models and languages
 - **Customizable Settings**: Adjust voices, speech recognition language, and more
 - **Local Processing**: All data stays on your machine using Ollama's local models
 - **Coming Soon**:
-  - Enhanced TTS and STT with dedicated servers
+  - Enhanced STT with dedicated servers
   - Persistent conversation history
   - Multiple language models support
 
@@ -23,14 +24,28 @@ Headroom is a web-based chatbot interface that leverages local language models t
 - A modern web browser
 - [Ollama](https://ollama.ai/) installed locally
 - The huihui_ai/qwen2.5-abliterate:32b model
+- (Optional) [Kokoro](https://github.com/hexgrad/kokoro) TTS server for high-quality voice output
 
 ## Getting Started
 
 1. Please refer to [setup.md](setup.md) for detailed installation and configuration instructions.
 2. Install Ollama and the required language model
-3. Start the Ollama server with `ollama serve`
-4. Start the Headroom server with `npm start` or `node server.js`
-5. Open http://localhost:3000 in your browser
+3. Use the provided launch script to start all services:
+   ```bash
+   ./launch.sh
+   ```
+   This script will:
+   - Check for required dependencies
+   - Start Ollama if it's not already running
+   - Start Kokoro TTS server if installed
+   - Launch the Headroom web application
+   - Open http://localhost:3023 in your browser
+
+Alternatively, you can start services manually:
+1. Start Ollama with `ollama serve`
+2. Start Kokoro TTS if installed
+3. Start the Headroom server with `node server.js`
+4. Open http://localhost:3023 in your browser
 
 ## Project Status
 

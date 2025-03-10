@@ -9,9 +9,16 @@ const OLLAMA_CONFIG = {
 
 // Text-to-Speech (TTS) configuration
 const TTS_CONFIG = {
-  url: 'http://localhost:5002/api/tts',  // Will be used when a real TTS server is implemented
   enabled: false,  // Whether TTS is enabled by default
-  useBuiltInFallback: true  // Use browser's built-in speech synthesis as fallback
+  useBuiltInFallback: true,  // Use browser's built-in speech synthesis as fallback
+  
+  // Kokoro TTS configuration
+  kokoroEnabled: true,  // Whether to use Kokoro TTS
+  kokoroURL: 'http://localhost:8008',  // Kokoro TTS server URL
+  kokoroModel: 'default',  // The model to use for Kokoro TTS
+  kokoroVoice: 'en_US',    // The language for Kokoro TTS
+  kokoroVoiceModel: 'default',  // The voice model to use for Kokoro TTS
+  kokoroSpeaker: 'default' // The speaker ID to use for Kokoro TTS
 };
 
 // Speech-to-Text (STT) configuration

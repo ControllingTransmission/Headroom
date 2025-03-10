@@ -6,6 +6,7 @@ This guide will help you set up Headroom, a local voice chatbot that uses Ollama
 
 - A modern web browser (Chrome, Firefox, Safari, Edge)
 - [Ollama](https://ollama.ai/) installed on your local machine
+- (Optional) [Kokoro](https://github.com/hexgrad/kokoro) TTS server for high-quality voice output
 
 ## Installation Steps
 
@@ -37,31 +38,62 @@ ollama serve
 
 This will start the Ollama server on localhost port 11434.
 
-### 4. Open the Headroom Web Interface
+### 4. (Optional) Set Up Kokoro TTS Server
 
-You have two options for opening the web interface:
+For high-quality voice output, you can set up the Kokoro TTS server:
 
-#### Option 1: Directly open the HTML file
+1. Follow the installation instructions at [github.com/hexgrad/kokoro](https://github.com/hexgrad/kokoro)
+2. Start the Kokoro server using the provided instructions
+3. The server should be running on http://localhost:8008 by default
 
-Simply open the `index.html` file in your web browser. You can do this by:
+If you don't install Kokoro, Headroom will fall back to using your browser's built-in speech synthesis.
 
-- Double-clicking the file
-- Dragging the file into your browser window
-- Right-clicking and selecting "Open with" your preferred browser
+### 5. Launch Headroom
 
-#### Option 2: Use the included Node.js server (recommended)
+You have two options for launching Headroom:
 
-If you have Node.js installed, you can use the included simple HTTP server:
+#### Option 1: Use the all-in-one launch script (recommended)
+
+The easiest way to start all necessary services is to use the included launch script:
 
 1. Open a terminal in the Headroom directory
-2. Run the following command:
+2. Make the script executable if it's not already:
+   ```bash
+   chmod +x launch.sh
+   ```
+3. Run the launch script:
+   ```bash
+   ./launch.sh
+   ```
 
-```bash
-node server.js
-```
+This script will:
+- Check for required dependencies (Node.js, Ollama)
+- Verify if the required language model is installed
+- Start Ollama if it's not already running
+- Start Kokoro TTS server if it's installed
+- Launch the Headroom web server
+- Provide a way to gracefully shut down all services with Ctrl+C
 
-3. The server will start at http://localhost:3000/
-4. Open this URL in your web browser
+#### Option 2: Start services manually
+
+If you prefer to start each service individually:
+
+1. Start Ollama server:
+   ```bash
+   ollama serve
+   ```
+
+2. (Optional) Start Kokoro TTS server if installed:
+   ```bash
+   kokoro serve
+   ```
+
+3. Start the Headroom web server:
+   ```bash
+   node server.js
+   ```
+
+4. Open http://localhost:3023/ in your web browser
 
 Using the Node.js server is recommended as it avoids potential CORS issues with browser security restrictions.
 
@@ -81,12 +113,23 @@ Using the Node.js server is recommended as it avoids potential CORS issues with 
 
 ### Voice Output
 1. Click the "Enable Audio Response" button
-2. The chatbot's responses will be spoken aloud using your device's speech synthesis
+2. The chatbot's responses will be spoken aloud
 3. Click "Disable Audio Response" to turn off voice output
 
 ### Settings
 Click the "Settings" button to adjust:
+
+#### Kokoro TTS Settings (if installed)
+- Enable/disable Kokoro TTS
+- Select TTS model (base processing model)
+- Select language for speech output
+- Select specific voice model for the selected language
+- Select speaker ID/character for more variety
+
+#### Browser TTS Settings (fallback)
 - Voice selection, speed, pitch, and volume for speech output
+
+#### Voice Input Settings
 - Language selection for speech recognition
 - Continuous mode for speech recognition
 
@@ -97,11 +140,16 @@ Click the "Settings" button to adjust:
 - **Connection error**: Check that no firewall is blocking localhost connections
 - **Voice input not working**: Check that your browser has permission to access your microphone
 - **Voice output not working**: Check that your browser has audio output enabled and volume is not muted
+- **Kokoro TTS not working**: 
+  - Ensure the Kokoro server is running at http://localhost:8008 (or the URL specified in config.js)
+  - Check the Kokoro server logs for any errors
+  - Make sure you've enabled Kokoro TTS in the Settings panel
+  - The system will automatically fall back to the browser's built-in TTS if Kokoro is unavailable
 
 ## Future Features
 
 - Enhanced voice input with custom STT server
-- Advanced text-to-speech with custom TTS server 
 - Persistent conversation history
 - Multiple language models support
 - Mobile-friendly responsive design
+- Additional Kokoro TTS features and voice options
