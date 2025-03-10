@@ -42,11 +42,50 @@ This will start the Ollama server on localhost port 11434.
 
 For high-quality voice output, you can set up the Kokoro TTS server:
 
-1. Follow the installation instructions at [github.com/hexgrad/kokoro](https://github.com/hexgrad/kokoro)
-2. Start the Kokoro server using the provided instructions
-3. The server should be running on http://localhost:8008 by default
+1. Install Python 3.10-3.12 (Kokoro has specific Python version requirements)
+2. Create a Python virtual environment:
+   ```bash
+   python -m venv kokoro_env
+   source kokoro_env/bin/activate  # On Windows: kokoro_env\Scripts\activate
+   ```
+   
+3. Install Kokoro and its dependencies:
+   ```bash
+   pip install kokoro soundfile
+   ```
+   
+4. For additional language support:
+   ```bash
+   # For Japanese
+   pip install misaki[ja]
+   
+   # For Chinese
+   pip install misaki[zh]
+   ```
+   
+5. On some systems, you may need to install espeak:
+   ```bash
+   # On Ubuntu/Debian
+   sudo apt-get install espeak-ng
+   
+   # On macOS
+   brew install espeak
+   ```
+   
+6. Start the Kokoro TTS server using either:
+   ```bash
+   # Method 1: While in the virtual environment
+   python -m kokoro.serve
+   
+   # Method 2: Use the included helper script
+   ./start_kokoro.sh
+   ```
+   
+7. The server should be running on http://localhost:8008 by default
 
 If you don't install Kokoro, Headroom will fall back to using your browser's built-in speech synthesis.
+
+> **Note**: For more details and the latest instructions, please visit the [Kokoro GitHub repository](https://github.com/hexgrad/kokoro).
 
 ### 5. Launch Headroom
 

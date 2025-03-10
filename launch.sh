@@ -51,29 +51,43 @@ fi
 KOKORO_INSTALLED=false
 KOKORO_PATH=""
 
-# Common paths where Kokoro might be installed
-KOKORO_POSSIBLE_PATHS=(
-  "/usr/local/bin/kokoro"
-  "/usr/bin/kokoro"
-  "$HOME/.local/bin/kokoro"
-  "$HOME/kokoro/kokoro"
-  "./kokoro/kokoro"
-)
-
-# Check for Kokoro installation
-for path in "${KOKORO_POSSIBLE_PATHS[@]}"; do
-  if [ -f "$path" ] && [ -x "$path" ]; then
-    KOKORO_INSTALLED=true
-    KOKORO_PATH="$path"
-    break
+# Check if the Kokoro repo is present in the current directory
+if [ -d "./kokoro" ]; then
+  KOKORO_INSTALLED=true
+  KOKORO_PATH="python3 -m kokoro.serve"
+  echo -e "${GREEN}✓ Kokoro TTS repository is found${NC}"
+  
+  # Check if we need to set up a Python virtual environment for Kokoro
+  if [ ! -d "./kokoro_env" ]; then
+    echo -e "${YELLOW}Setting up Python virtual environment for Kokoro...${NC}"
+    python3 -m venv kokoro_env
+    # We won't actually install Kokoro here due to potential dependency issues
+    # Users should follow the official Kokoro installation instructions
   fi
-done
-
-if $KOKORO_INSTALLED; then
-  echo -e "${GREEN}✓ Kokoro TTS is installed${NC}"
 else
-  echo -e "${YELLOW}⚠ Kokoro TTS is not found. Will use browser's built-in TTS.${NC}"
-  echo -e "${YELLOW}  To install Kokoro, visit: https://github.com/hexgrad/kokoro${NC}"
+  # Check common paths where Kokoro might be installed
+  KOKORO_POSSIBLE_PATHS=(
+    "/usr/local/bin/kokoro"
+    "/usr/bin/kokoro"
+    "$HOME/.local/bin/kokoro"
+    "$HOME/kokoro/kokoro"
+  )
+
+  # Check for Kokoro installation
+  for path in "${KOKORO_POSSIBLE_PATHS[@]}"; do
+    if [ -f "$path" ] && [ -x "$path" ]; then
+      KOKORO_INSTALLED=true
+      KOKORO_PATH="$path"
+      break
+    fi
+  done
+
+  if $KOKORO_INSTALLED; then
+    echo -e "${GREEN}✓ Kokoro TTS is installed${NC}"
+  else
+    echo -e "${YELLOW}⚠ Kokoro TTS is not found. Will use browser's built-in TTS.${NC}"
+    echo -e "${YELLOW}  To install Kokoro, visit: https://github.com/hexgrad/kokoro${NC}"
+  fi
 fi
 
 echo
@@ -120,14 +134,27 @@ if $KOKORO_INSTALLED; then
     echo -e "${GREEN}✓ Kokoro TTS server is already running${NC}"
   else
     echo -e "${BLUE}Starting Kokoro TTS server...${NC}"
-    # Start Kokoro in the background
-    "$KOKORO_PATH" serve &
-    KOKORO_PID=$!
-    sleep 2
-    if is_process_running "kokoro"; then
-      echo -e "${GREEN}✓ Kokoro TTS server started successfully${NC}"
+    
+    # Check if we're using the kokoro repository
+    if [[ "$KOKORO_PATH" == *"python3 -m kokoro.serve"* ]]; then
+      echo -e "${YELLOW}Using Kokoro from the repository${NC}"
+      # We would need to activate the virtual environment and use the Python module
+      echo -e "${YELLOW}⚠ Kokoro requires proper installation to function.${NC}"
+      echo -e "${YELLOW}  Please follow the instructions at: https://github.com/hexgrad/kokoro${NC}"
+      echo -e "${YELLOW}  Install with: pip install kokoro${NC}"
+      echo -e "${YELLOW}  Falling back to browser TTS.${NC}"
+      KOKORO_INSTALLED=false
     else
-      echo -e "${RED}Failed to start Kokoro TTS server. Will fall back to browser TTS.${NC}"
+      # Start Kokoro in the background
+      "$KOKORO_PATH" serve &
+      KOKORO_PID=$!
+      sleep 2
+      if is_process_running "kokoro"; then
+        echo -e "${GREEN}✓ Kokoro TTS server started successfully${NC}"
+      else
+        echo -e "${RED}Failed to start Kokoro TTS server. Will fall back to browser TTS.${NC}"
+        KOKORO_INSTALLED=false
+      fi
     fi
   fi
 fi

@@ -1,0 +1,9 @@
+name: kokoro
+channels:
+  - defaults
+dependencies:
+  - python=3.10
+  - pip
+  - pip:
+      - kokoro>=0.8.4
+      - soundfile
