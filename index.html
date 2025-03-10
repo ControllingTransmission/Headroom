@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Headroom - Local Voice Chatbot</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 20px;
+    }
+    
+    .chat-container {
+      display: flex;
+      flex-direction: column;
+      height: 70vh;
+      border: 1px solid #ddd;
+      border-radius: 8px;
+      overflow: hidden;
+    }
+    
+    .chat-messages {
+      flex: 1;
+      padding: 15px;
+      overflow-y: auto;
+      background-color: #f9f9f9;
+    }
+    
+    .input-area {
+      display: flex;
+      padding: 10px;
+      border-top: 1px solid #ddd;
+      background-color: #fff;
+    }
+    
+    #message-input {
+      flex: 1;
+      padding: 10px;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+    }
+    
+    button {
+      margin-left: 10px;
+      padding: 10px 15px;
+      background-color: #4285f4;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+    
+    button:hover {
+      background-color: #3b78e7;
+    }
+    
+    .message {
+      margin-bottom: 15px;
+      padding: 10px;
+      border-radius: 8px;
+      max-width: 80%;
+    }
+    
+    .user-message {
+      background-color: #e6f2ff;
+      align-self: flex-end;
+      margin-left: auto;
+    }
+    
+    .bot-message {
+      background-color: #f0f0f0;
+      align-self: flex-start;
+    }
+    
+    .controls {
+      margin-top: 15px;
+      display: flex;
+      gap: 10px;
+    }
+  </style>
+</head>
+<body>
+  <h1>Headroom</h1>
+  <p>A local voice chatbot experiment</p>
+  
+  <div class="chat-container">
+    <div class="chat-messages" id="chat-messages">
+      <div class="message bot-message">
+        Hello! I'm Headroom. How can I assist you today?
+      </div>
+    </div>
+    
+    <div class="input-area">
+      <input type="text" id="message-input" placeholder="Type your message here...">
+      <button id="send-button">Send</button>
+    </div>
+  </div>
+  
+  <div class="controls">
+    <button id="voice-input-button">Enable Voice Input</button>
+    <button id="toggle-audio-button">Enable Audio Response</button>
+    <button id="reset-button">New Conversation</button>
+  </div>
+  
+  <div id="voice-status" style="margin-top: 10px; text-align: center; display: none;">
+    <span style="color: red; font-weight: bold;">● Recording</span>
+    <div id="transcript-preview" style="font-style: italic; margin-top: 5px; color: #666;"></div>
+  </div>
+  
+  <script src="config.js"></script>
+  <script src="speech.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

@@ -1,0 +1,23 @@
+{
+  "name": "headroom",
+  "version": "0.1.0",
+  "description": "An experimental local voice chatbot",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "test": "echo \"No tests configured\""
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/yourusername/headroom.git"
+  },
+  "keywords": [
+    "chatbot",
+    "voice",
+    "ollama",
+    "ai"
+  ],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {}
+}
