@@ -40,11 +40,13 @@ Chatbot output includes:
     - Receive and display chatbot responses in the frontend.
 
 - **Get TTS server working for output**
-  - Install and configure a Text-to-Speech (TTS) server (e.g., eSpeak, Google TTS).
-  - Integrate the TTS server with the chatbot response pipeline.
-    - Convert text responses from the chatbot into audio.
-  - Ensure audio playback functionality in the web browser.
-    - Implement audio controls (play, pause, stop).
+  - IMPORTANT: ONLY use the custom OpenVoice TTS server for speech synthesis
+  - NEVER use web-based TTS (like Google TTS) or native browser/system TTS
+  - The OpenVoice TTS server must run 100% locally with no internet dependency
+  - Custom voices must sound natural (not tones or other non-speech sounds)
+  - Integrate the OpenVoice TTS server with the chatbot response pipeline
+    - Convert text responses from the chatbot into natural-sounding speech
+  - Ensure audio playback functionality in the web browser
 
 - **Get STT working for continuous input**
   - Install and configure a Speech-to-Text (STT) server (e.g., Vosk, DeepSpeech).

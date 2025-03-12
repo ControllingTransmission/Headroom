@@ -6,7 +6,7 @@ This guide will help you set up Headroom, a local voice chatbot that uses Ollama
 
 - A modern web browser (Chrome, Firefox, Safari, Edge)
 - [Ollama](https://ollama.ai/) installed on your local machine
-- (Optional) [Kokoro](https://github.com/hexgrad/kokoro) TTS server for high-quality voice output
+- (Optional) [OpenVoice](https://github.com/myshell-ai/OpenVoice) TTS server for high-quality voice output
 
 ## Installation Steps
 
@@ -38,54 +38,67 @@ ollama serve
 
 This will start the Ollama server on localhost port 11434.
 
-### 4. (Optional) Set Up Kokoro TTS Server
+### 4. (Optional) Set Up OpenVoice TTS Server
 
-For high-quality voice output, you can set up the Kokoro TTS server:
+For real speech output, you can set up the OpenVoice TTS server which uses Google's Text-to-Speech API offline:
 
-1. Install Python 3.10-3.12 (Kokoro has specific Python version requirements)
-2. Create a Python virtual environment:
-   ```bash
-   python -m venv kokoro_env
-   source kokoro_env/bin/activate  # On Windows: kokoro_env\Scripts\activate
-   ```
-   
-3. Install Kokoro and its dependencies:
-   ```bash
-   pip install kokoro soundfile
-   ```
-   
-4. For additional language support:
-   ```bash
-   # For Japanese
-   pip install misaki[ja]
-   
-   # For Chinese
-   pip install misaki[zh]
-   ```
-   
-5. On some systems, you may need to install espeak:
-   ```bash
-   # On Ubuntu/Debian
-   sudo apt-get install espeak-ng
-   
-   # On macOS
-   brew install espeak
-   ```
-   
-6. Start the Kokoro TTS server using either:
-   ```bash
-   # Method 1: While in the virtual environment
-   python -m kokoro.serve
-   
-   # Method 2: Use the included helper script
-   ./start_kokoro.sh
-   ```
-   
-7. The server should be running on http://localhost:8008 by default
+1. Install Python 3.9 or newer
+   > **Note**: OpenVoice works with Python 3.9 or newer versions.
 
-If you don't install Kokoro, Headroom will fall back to using your browser's built-in speech synthesis.
+2. Use the included helper script for automatic installation:
+   ```bash
+   chmod +x start_openvoice.sh
+   ./start_openvoice.sh
+   ```
+   
+   This script will:
+   - Create a virtual environment if needed
+   - Install the necessary dependencies (primarily gTTS)
+   - Start the OpenVoice TTS server
 
-> **Note**: For more details and the latest instructions, please visit the [Kokoro GitHub repository](https://github.com/hexgrad/kokoro).
+3. Alternatively, you can install manually:
+   ```bash
+   python -m venv openvoice_env
+   source openvoice_env/bin/activate  # On Windows: openvoice_env\Scripts\activate
+   pip install gtts
+   ```
+   
+4. Start the OpenVoice server manually:
+   ```bash
+   # While in the virtual environment
+   python openvoice_server.py
+   ```
+   
+5. The server should be running on http://localhost:8008 by default
+
+### OpenVoice Features
+
+- **Real Speech**: Uses Google's Text-to-Speech engine for natural-sounding voices
+- **Multiple Voices**: Over 30 different voices across various languages, including:
+  - Male and female voices for each language
+  - Child voice option for English (US)
+  - Regional accents (US, UK, Australian English, etc.)
+- **Language Support**: 14 languages including English, French, German, Spanish, Italian, Japanese, Korean, Chinese, Russian, Portuguese, Hindi, and Dutch
+- **Speed Control**: Can adjust speech speed (slow, normal, fast)
+- **Audio Caching**: Caches generated speech to improve performance
+- **Fallback Mechanism**: Falls back to browser TTS if any issues occur
+
+### OpenVoice Installation Troubleshooting
+
+If you encounter dependency errors when installing OpenVoice:
+
+1. Make sure you have Python 3.9 or newer installed:
+   ```bash
+   python --version
+   ```
+
+2. Ensure you have internet access (only needed when generating speech for the first time)
+
+3. If you continue facing issues:
+   - The launch.sh script will automatically detect if OpenVoice is unavailable and fall back to browser TTS
+   - You can explicitly use browser TTS by setting `"openVoiceEnabled": false` in config.js
+
+If you don't install OpenVoice, Headroom will fall back to using your browser's built-in speech synthesis.
 
 ### 5. Launch Headroom
 
@@ -109,7 +122,7 @@ This script will:
 - Check for required dependencies (Node.js, Ollama)
 - Verify if the required language model is installed
 - Start Ollama if it's not already running
-- Start Kokoro TTS server if it's installed
+- Start OpenVoice TTS server if it's installed
 - Launch the Headroom web server
 - Provide a way to gracefully shut down all services with Ctrl+C
 
@@ -122,9 +135,9 @@ If you prefer to start each service individually:
    ollama serve
    ```
 
-2. (Optional) Start Kokoro TTS server if installed:
+2. (Optional) Start OpenVoice TTS server if installed:
    ```bash
-   kokoro serve
+   ./start_openvoice.sh
    ```
 
 3. Start the Headroom web server:
@@ -158,12 +171,10 @@ Using the Node.js server is recommended as it avoids potential CORS issues with 
 ### Settings
 Click the "Settings" button to adjust:
 
-#### Kokoro TTS Settings (if installed)
-- Enable/disable Kokoro TTS
-- Select TTS model (base processing model)
-- Select language for speech output
-- Select specific voice model for the selected language
-- Select speaker ID/character for more variety
+#### OpenVoice TTS Settings (if installed)
+- Enable/disable OpenVoice TTS
+- Select voice model
+- Select speaker ID/character for the voice output
 
 #### Browser TTS Settings (fallback)
 - Voice selection, speed, pitch, and volume for speech output
@@ -179,11 +190,11 @@ Click the "Settings" button to adjust:
 - **Connection error**: Check that no firewall is blocking localhost connections
 - **Voice input not working**: Check that your browser has permission to access your microphone
 - **Voice output not working**: Check that your browser has audio output enabled and volume is not muted
-- **Kokoro TTS not working**: 
-  - Ensure the Kokoro server is running at http://localhost:8008 (or the URL specified in config.js)
-  - Check the Kokoro server logs for any errors
-  - Make sure you've enabled Kokoro TTS in the Settings panel
-  - The system will automatically fall back to the browser's built-in TTS if Kokoro is unavailable
+- **OpenVoice TTS not working**: 
+  - Ensure the OpenVoice server is running at http://localhost:8008 (or the URL specified in config.js)
+  - Check the OpenVoice server logs for any errors
+  - Make sure you've enabled OpenVoice TTS in the Settings panel
+  - The system will automatically fall back to the browser's built-in TTS if OpenVoice is unavailable
 
 ## Future Features
 
@@ -191,4 +202,4 @@ Click the "Settings" button to adjust:
 - Persistent conversation history
 - Multiple language models support
 - Mobile-friendly responsive design
-- Additional Kokoro TTS features and voice options
+- Additional OpenVoice TTS features and voice options

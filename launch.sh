@@ -27,6 +27,26 @@ is_process_running() {
   pgrep -f "$1" >/dev/null
 }
 
+# Function to find and kill process running on a specific port
+kill_process_on_port() {
+  local port=$1
+  local pid=$(lsof -i :$port -t)
+  
+  if [ -n "$pid" ]; then
+    echo -e "${BLUE}Stopping process on port $port (PID: $pid)...${NC}"
+    kill $pid 2>/dev/null
+    sleep 1
+    
+    # Check if it's still running and force kill if necessary
+    if kill -0 $pid 2>/dev/null; then
+      echo -e "${YELLOW}Process still running, force killing...${NC}"
+      kill -9 $pid 2>/dev/null
+    fi
+    
+    echo -e "${GREEN}✓ Process stopped${NC}"
+  fi
+}
+
 # Check for required dependencies
 echo -e "${BOLD}Checking dependencies...${NC}"
 
@@ -47,47 +67,27 @@ else
   echo -e "${GREEN}✓ Ollama is installed${NC}"
 fi
 
-# Check if Kokoro is installed (optional)
-KOKORO_INSTALLED=false
-KOKORO_PATH=""
+# Check if OpenVoice is installed (optional)
+OPENVOICE_INSTALLED=false
+OPENVOICE_PATH=""
 
-# Check if the Kokoro repo is present in the current directory
-if [ -d "./kokoro" ]; then
-  KOKORO_INSTALLED=true
-  KOKORO_PATH="python3 -m kokoro.serve"
-  echo -e "${GREEN}✓ Kokoro TTS repository is found${NC}"
+# ONLY use the custom OpenVoice TTS server - no fallbacks to system or browser TTS
+if [ -f "./openvoice_server.py" ]; then
+  OPENVOICE_INSTALLED=true
+  OPENVOICE_PATH="python3 openvoice_server.py"
+  OPENVOICE_TYPE="openvoice"
+  echo -e "${GREEN}✓ Custom OpenVoice TTS server found - using fully local custom voices${NC}"
   
-  # Check if we need to set up a Python virtual environment for Kokoro
-  if [ ! -d "./kokoro_env" ]; then
-    echo -e "${YELLOW}Setting up Python virtual environment for Kokoro...${NC}"
-    python3 -m venv kokoro_env
-    # We won't actually install Kokoro here due to potential dependency issues
-    # Users should follow the official Kokoro installation instructions
+  # Check if we need to set up a Python virtual environment for OpenVoice
+  if [ ! -d "./openvoice_env" ]; then
+    echo -e "${YELLOW}Setting up Python virtual environment for OpenVoice...${NC}"
+    python3 -m venv openvoice_env
   fi
 else
-  # Check common paths where Kokoro might be installed
-  KOKORO_POSSIBLE_PATHS=(
-    "/usr/local/bin/kokoro"
-    "/usr/bin/kokoro"
-    "$HOME/.local/bin/kokoro"
-    "$HOME/kokoro/kokoro"
-  )
-
-  # Check for Kokoro installation
-  for path in "${KOKORO_POSSIBLE_PATHS[@]}"; do
-    if [ -f "$path" ] && [ -x "$path" ]; then
-      KOKORO_INSTALLED=true
-      KOKORO_PATH="$path"
-      break
-    fi
-  done
-
-  if $KOKORO_INSTALLED; then
-    echo -e "${GREEN}✓ Kokoro TTS is installed${NC}"
-  else
-    echo -e "${YELLOW}⚠ Kokoro TTS is not found. Will use browser's built-in TTS.${NC}"
-    echo -e "${YELLOW}  To install Kokoro, visit: https://github.com/hexgrad/kokoro${NC}"
-  fi
+  echo -e "${RED}ERROR: Custom OpenVoice TTS server not found!${NC}"
+  echo -e "${RED}The application requires the custom OpenVoice TTS server.${NC}"
+  echo -e "${RED}Cannot continue without custom OpenVoice TTS. Exiting.${NC}"
+  exit 1
 fi
 
 echo
@@ -110,6 +110,20 @@ fi
 
 echo
 
+# Kill any existing processes that might conflict
+echo -e "${BOLD}Checking for existing processes...${NC}"
+# Check for web server on port 3023
+if lsof -i :3023 -t >/dev/null 2>&1; then
+  echo -e "${YELLOW}Found existing process on port 3023 (web server). Stopping it...${NC}"
+  kill_process_on_port 3023
+fi
+
+# Check for OpenVoice server on port 8008
+if lsof -i :8008 -t >/dev/null 2>&1; then
+  echo -e "${YELLOW}Found existing process on port 8008 (OpenVoice server). Stopping it...${NC}"
+  kill_process_on_port 8008
+fi
+
 # Start Ollama if not already running
 echo -e "${BOLD}Starting Ollama server...${NC}"
 if is_process_running "ollama serve"; then
@@ -127,34 +141,63 @@ else
   fi
 fi
 
-# Start Kokoro if installed and not already running
-if $KOKORO_INSTALLED; then
-  echo -e "${BOLD}Starting Kokoro TTS server...${NC}"
-  if is_process_running "kokoro"; then
-    echo -e "${GREEN}✓ Kokoro TTS server is already running${NC}"
+# Start minimal OpenVoice if installed and not already running
+if $OPENVOICE_INSTALLED; then
+  echo -e "${BOLD}Starting OpenVoice TTS server...${NC}"
+  if is_process_running "openvoice_server.py" || is_process_running "minimal_openvoice_server.py" || is_process_running "local_openvoice_server.py" || is_process_running "elevenlabs_openvoice_server.py"; then
+    echo -e "${GREEN}✓ OpenVoice TTS server is already running${NC}"
   else
-    echo -e "${BLUE}Starting Kokoro TTS server...${NC}"
+    echo -e "${BLUE}Starting OpenVoice TTS server...${NC}"
     
-    # Check if we're using the kokoro repository
-    if [[ "$KOKORO_PATH" == *"python3 -m kokoro.serve"* ]]; then
-      echo -e "${YELLOW}Using Kokoro from the repository${NC}"
-      # We would need to activate the virtual environment and use the Python module
-      echo -e "${YELLOW}⚠ Kokoro requires proper installation to function.${NC}"
-      echo -e "${YELLOW}  Please follow the instructions at: https://github.com/hexgrad/kokoro${NC}"
-      echo -e "${YELLOW}  Install with: pip install kokoro${NC}"
-      echo -e "${YELLOW}  Falling back to browser TTS.${NC}"
-      KOKORO_INSTALLED=false
-    else
-      # Start Kokoro in the background
-      "$KOKORO_PATH" serve &
-      KOKORO_PID=$!
-      sleep 2
-      if is_process_running "kokoro"; then
-        echo -e "${GREEN}✓ Kokoro TTS server started successfully${NC}"
-      else
-        echo -e "${RED}Failed to start Kokoro TTS server. Will fall back to browser TTS.${NC}"
-        KOKORO_INSTALLED=false
+    # Check if we have a virtual environment for OpenVoice
+    if [ -d "./openvoice_env" ] && [ -f "./openvoice_env/bin/activate" ]; then
+      echo -e "${BLUE}Found OpenVoice virtual environment, attempting to use it...${NC}"
+      
+      # Try to use the virtual environment to start OpenVoice
+      source ./openvoice_env/bin/activate
+      
+      # Install dependencies if needed
+      if ! python -c "import numpy" &> /dev/null; then
+        echo -e "${YELLOW}Installing missing numpy dependency...${NC}"
+        pip install numpy
       fi
+      
+      if [ "$OPENVOICE_TYPE" = "openvoice" ]; then
+        # Install OpenVoice dependencies
+        if ! python -c "import numpy" &> /dev/null; then
+          echo -e "${YELLOW}Installing required dependencies...${NC}"
+          pip install numpy soundfile
+        fi
+        
+        # Start custom OpenVoice TTS server in the background (fully offline)
+        echo -e "${BLUE}Starting custom OpenVoice TTS server (100% offline, using custom voices)${NC}"
+        python openvoice_server.py &
+      else 
+        echo -e "${RED}Error: Custom OpenVoice TTS server missing or invalid configuration.${NC}"
+        echo -e "${RED}Cannot continue without custom OpenVoice TTS. Exiting.${NC}"
+        exit 1
+      fi
+      OPENVOICE_PID=$!
+      sleep 2
+      
+      if ps -p $OPENVOICE_PID > /dev/null; then
+        if [ "$OPENVOICE_TYPE" = "system" ]; then
+          echo -e "${GREEN}✓ System Voice TTS server started successfully${NC}"
+          echo -e "${BLUE}This server uses your computer's built-in speech synthesis${NC}"
+        else
+          echo -e "${GREEN}✓ TTS server started successfully${NC}"
+        fi
+        deactivate
+      else
+        echo -e "${RED}Failed to start TTS server. Will fall back to browser TTS.${NC}"
+        deactivate
+        OPENVOICE_INSTALLED=false
+      fi
+    else
+      echo -e "${YELLOW}⚠ OpenVoice requires proper installation to function.${NC}"
+      echo -e "${YELLOW}  Please run: ./start_openvoice.sh${NC}"
+      echo -e "${YELLOW}  Falling back to browser TTS.${NC}"
+      OPENVOICE_INSTALLED=false
     fi
   fi
 fi
@@ -174,23 +217,36 @@ trap cleanup INT
 cleanup() {
   echo -e "\n${BOLD}Shutting down services...${NC}"
   
-  # Kill background processes if they exist
+  # Stop Node.js web server (port 3023)
+  echo -e "${BLUE}Stopping web server...${NC}"
+  kill_process_on_port 3023
+  
+  # Stop OpenVoice TTS server (port 8008)
+  echo -e "${BLUE}Stopping OpenVoice TTS server...${NC}"
+  kill_process_on_port 8008
+  
+  # Kill Ollama if we started it
   if [ -n "$OLLAMA_PID" ] && kill -0 $OLLAMA_PID 2>/dev/null; then
     echo -e "${BLUE}Stopping Ollama server...${NC}"
     kill $OLLAMA_PID
-  fi
-  
-  if [ -n "$KOKORO_PID" ] && kill -0 $KOKORO_PID 2>/dev/null; then
-    echo -e "${BLUE}Stopping Kokoro TTS server...${NC}"
-    kill $KOKORO_PID
+    sleep 1
+    if kill -0 $OLLAMA_PID 2>/dev/null; then
+      kill -9 $OLLAMA_PID
+    fi
+    echo -e "${GREEN}✓ Ollama server stopped${NC}"
   fi
   
   echo -e "${GREEN}All services stopped. Goodbye!${NC}"
   exit 0
 }
 
-# Start the Headroom server
-node server.js
+# Start the Headroom server in the background
+node server.js &
+WEB_SERVER_PID=$!
 
-# This point is only reached if the server exits normally
+# Wait for Ctrl+C or server to exit
+wait $WEB_SERVER_PID
+echo -e "${YELLOW}Web server exited. Cleaning up remaining processes...${NC}"
+
+# This point is reached if the server exits normally or on Ctrl+C
 cleanup

@@ -16,12 +16,18 @@ document.addEventListener('DOMContentLoaded', () => {
   
   // Initialize TTS handler
   const ttsHandler = new TTSHandler(window.HEADROOM_CONFIG.TTS);
-  let ttsEnabled = ttsHandler.enabled;
   
+  // Make sure ttsEnabled is synchronized with the handler's state
+  let ttsEnabled = ttsHandler.enabled;
+  console.log('Initial TTS enabled state:', ttsEnabled);
+  
+  // Initial welcome message to be shown and spoken on page load
+  const initialMessage = 'Hello! I\'m Headroom. How can I assist you today?';
+
   // Store conversation history
   let conversationHistory = [
     { role: 'system', content: SYSTEM_PROMPT },
-    { role: 'assistant', content: 'Hello! I\'m Headroom. How can I assist you today?' }
+    { role: 'assistant', content: initialMessage }
   ];
   
   // Event listeners
@@ -33,16 +39,263 @@ document.addEventListener('DOMContentLoaded', () => {
   });
   document.getElementById('reset-button').addEventListener('click', resetConversation);
   
-  // Toggle TTS functionality
+  // Create a comprehensive permissions panel for both audio output and microphone input
+  
+  // Make sure audio is enabled by default in the settings
+  ttsHandler.enabled = true;
+  ttsEnabled = true;
+  
+  // Set initial button text to properly reflect that audio is enabled
   const toggleAudioBtn = document.getElementById('toggle-audio-button');
+  toggleAudioBtn.textContent = 'Disable Audio Response';
+  
+  // Create a modal overlay for permissions
+  const overlay = document.createElement('div');
+  overlay.style.cssText = `
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.7);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+  `;
+  
+  // Create the permission dialog with a modern design
+  const dialog = document.createElement('div');
+  dialog.style.cssText = `
+    background-color: white;
+    border-radius: 12px;
+    padding: 30px;
+    max-width: 500px;
+    width: 90%;
+    text-align: center;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
+  `;
+  
+  // Add content to the dialog
+  dialog.innerHTML = `
+    <h2 style="margin-top: 0; color: #333; font-size: 24px;">Welcome to Headroom</h2>
+    <p style="color: #555; margin-bottom: 25px; line-height: 1.5;">
+      Headroom needs permission to access your device's microphone and audio playback.
+      All speech processing happens completely locally on your device - no internet needed.
+    </p>
+    
+    <div style="display: flex; margin-bottom: 30px; justify-content: space-between; flex-wrap: wrap;">
+      <!-- Audio output permission section -->
+      <div style="flex: 1; min-width: 200px; padding: 15px; border: 1px solid #eee; border-radius: 8px; margin: 0 10px 10px 0;">
+        <div style="font-size: 40px; color: #4CAF50; margin-bottom: 10px;">🔊</div>
+        <h3 style="margin: 0 0 10px 0; color: #444;">Speech Output</h3>
+        <p style="color: #666; font-size: 14px; margin-bottom: 15px;">
+          Allows Headroom to speak responses using custom OpenVoice technology (100% offline)
+        </p>
+        <div id="audio-output-status" style="
+          background-color: #fff9c4;
+          color: #856404;
+          padding: 5px;
+          border-radius: 4px;
+          font-size: 12px;
+          margin-bottom: 10px;
+        ">Waiting for permission</div>
+      </div>
+      
+      <!-- Microphone input permission section -->
+      <div style="flex: 1; min-width: 200px; padding: 15px; border: 1px solid #eee; border-radius: 8px; margin-bottom: 10px;">
+        <div style="font-size: 40px; color: #2196F3; margin-bottom: 10px;">🎤</div>
+        <h3 style="margin: 0 0 10px 0; color: #444;">Voice Input</h3>
+        <p style="color: #666; font-size: 14px; margin-bottom: 15px;">
+          Allows you to speak to Headroom using your microphone
+        </p>
+        <div id="mic-status" style="
+          background-color: #fff9c4;
+          color: #856404;
+          padding: 5px;
+          border-radius: 4px;
+          font-size: 12px;
+          margin-bottom: 10px;
+        ">Waiting for permission</div>
+      </div>
+    </div>
+    
+    <button id="enable-permissions-btn" style="
+      background-color: #4CAF50;
+      color: white;
+      border: none;
+      padding: 12px 30px;
+      border-radius: 50px;
+      font-size: 16px;
+      font-weight: bold;
+      cursor: pointer;
+      transition: all 0.2s;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+      display: block;
+      margin: 0 auto;
+    ">Enable Permissions</button>
+    
+    <p style="font-size: 12px; color: #999; margin-top: 20px;">
+      You can change these permissions later in your browser settings.
+    </p>
+  `;
+  
+  // Add the dialog to the overlay
+  overlay.appendChild(dialog);
+  
+  // Add the overlay to the document
+  document.body.appendChild(overlay);
+  
+  // Function to initialize chat after permissions are granted
+  const initializeChat = () => {
+    // Remove the overlay
+    if (document.body.contains(overlay)) {
+      document.body.removeChild(overlay);
+    }
+    
+    // Set local storage flag to remember this device has given permission
+    try {
+      localStorage.setItem('headroom_permissions_granted', 'true');
+    } catch (e) {
+      console.warn('Unable to store permissions in localStorage');
+    }
+    
+    // Initialize the conversation
+    console.log('Initializing conversation with welcome message');
+    resetConversation();
+  };
+  
+  // Add hover effect to button
+  setTimeout(() => {
+    const permissionsBtn = document.getElementById('enable-permissions-btn');
+    
+    if (permissionsBtn) {
+      permissionsBtn.onmouseover = () => {
+        permissionsBtn.style.backgroundColor = '#45a049';
+        permissionsBtn.style.transform = 'translateY(-2px)';
+        permissionsBtn.style.boxShadow = '0 4px 8px rgba(0,0,0,0.2)';
+      };
+      
+      permissionsBtn.onmouseout = () => {
+        permissionsBtn.style.backgroundColor = '#4CAF50';
+        permissionsBtn.style.transform = 'translateY(0)';
+        permissionsBtn.style.boxShadow = '0 2px 5px rgba(0,0,0,0.2)';
+      };
+      
+      // Add click handler for the permissions button
+      permissionsBtn.addEventListener('click', async () => {
+        console.log('User clicked to enable permissions');
+        permissionsBtn.disabled = true;
+        permissionsBtn.textContent = 'Requesting permissions...';
+        
+        // Request audio output permission by playing silent audio
+        const audioOutputStatus = document.getElementById('audio-output-status');
+        const micStatus = document.getElementById('mic-status');
+        
+        try {
+          // Step 1: Request audio output permission
+          audioOutputStatus.textContent = 'Requesting permission...';
+          audioOutputStatus.style.backgroundColor = '#fff9c4';
+          audioOutputStatus.style.color = '#856404';
+          
+          // Play a silent sound to unlock audio
+          const silentSound = new Audio("data:audio/mp3;base64,SUQzBAAAAAABEVRYWFgAAAAtAAADY29tbWVudABCaWdTb3VuZEJhbmsuY29tIC8gTGFTb25vdGhlcXVlLm9yZwBURU5DAAAAHQAAA1N3aXRjaCBQbHVzIMKpIE5DSCBTb2Z0d2FyZQBUSVQyAAAABgAAAzIyMzUAVFNTRQAAAA8AAANMYXZmNTcuODMuMTAwAAAAAAAAAAAAAAD/80DEAAAAA0gAAAAATEFNRTMuMTAwVVVVVVVVVVVVVUxBTUUzLjEwMFVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVf/zQsRbAAADSAAAAABVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVf/zQMSkAAADSAAAAABVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVV");
+          await silentSound.play();
+          
+          console.log('Audio output permission granted');
+          audioOutputStatus.textContent = 'Permission granted ✓';
+          audioOutputStatus.style.backgroundColor = '#d4edda';
+          audioOutputStatus.style.color = '#155724';
+          
+          // Step 2: Request microphone permission
+          micStatus.textContent = 'Requesting permission...';
+          micStatus.style.backgroundColor = '#fff9c4';
+          micStatus.style.color = '#856404';
+          
+          // Request microphone access
+          const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+          
+          console.log('Microphone permission granted');
+          micStatus.textContent = 'Permission granted ✓';
+          micStatus.style.backgroundColor = '#d4edda';
+          micStatus.style.color = '#155724';
+          
+          // Stop the microphone stream since we just needed permission
+          stream.getTracks().forEach(track => track.stop());
+          
+          // Update button to show success
+          permissionsBtn.textContent = 'All Permissions Granted ✓';
+          permissionsBtn.style.backgroundColor = '#28a745';
+          
+          // Wait a moment to show the success state before proceeding
+          setTimeout(() => {
+            // Initialize the chat with audio enabled
+            initializeChat();
+          }, 1000);
+          
+        } catch (error) {
+          console.error('Error requesting permissions:', error);
+          
+          // Check which permission failed
+          if (audioOutputStatus.textContent !== 'Permission granted ✓') {
+            audioOutputStatus.textContent = 'Permission denied ✗';
+            audioOutputStatus.style.backgroundColor = '#f8d7da';
+            audioOutputStatus.style.color = '#721c24';
+          }
+          
+          if (micStatus.textContent !== 'Permission granted ✓') {
+            micStatus.textContent = 'Permission denied ✗';
+            micStatus.style.backgroundColor = '#f8d7da';
+            micStatus.style.color = '#721c24';
+          }
+          
+          // Update button to allow retry
+          permissionsBtn.disabled = false;
+          permissionsBtn.textContent = 'Retry Permissions';
+          
+          // Show a message explaining the issue
+          const errorMessage = document.createElement('p');
+          errorMessage.style.cssText = 'color: #721c24; background-color: #f8d7da; padding: 10px; border-radius: 4px; margin-top: 15px;';
+          errorMessage.textContent = 'Some permissions were denied. The app will still work, but with limited functionality.';
+          
+          // Add a skip button to proceed anyway
+          const skipButton = document.createElement('button');
+          skipButton.textContent = 'Continue Anyway';
+          skipButton.style.cssText = 'background-color: #6c757d; color: white; border: none; padding: 8px 16px; border-radius: 4px; margin-top: 10px; cursor: pointer;';
+          skipButton.onclick = () => {
+            initializeChat();
+          };
+          
+          // Add these elements to the dialog
+          dialog.appendChild(errorMessage);
+          dialog.appendChild(skipButton);
+        }
+      });
+    }
+  }, 100); // Small delay to ensure DOM is ready
+  
+  // Toggle TTS functionality - the variable is already declared above
+  // No need to redeclare toggleAudioBtn
+  
   toggleAudioBtn.addEventListener('click', () => {
-    ttsEnabled = ttsHandler.setEnabled(!ttsEnabled);
-    toggleAudioBtn.textContent = ttsEnabled ? 'Disable Audio Response' : 'Enable Audio Response';
+    // Get the current state directly from the handler
+    const currentState = ttsHandler.enabled;
+    console.log('Current TTS state before toggle:', currentState);
+    
+    // Toggle the TTS state
+    const newState = !currentState;
+    ttsEnabled = ttsHandler.setEnabled(newState);
+    console.log('TTS state toggled to:', ttsEnabled, 'handler state:', ttsHandler.enabled);
+    
+    // Update button text based on the actual new state from the handler
+    toggleAudioBtn.textContent = ttsHandler.enabled ? 'Disable Audio Response' : 'Enable Audio Response';
+    console.log('Updated TTS button text to:', toggleAudioBtn.textContent);
     
     if (ttsEnabled) {
       let message;
-      if (ttsHandler.kokoroEnabled) {
-        message = 'Audio responses enabled. Using Kokoro TTS.';
+      if (ttsHandler.openVoiceEnabled) {
+        message = 'Audio responses enabled. Using OpenVoice TTS.';
       } else {
         message = 'Audio responses enabled. Using browser built-in speech synthesis.';
       }
@@ -58,76 +311,67 @@ document.addEventListener('DOMContentLoaded', () => {
   const settingsButton = document.getElementById('settings-button');
   const settingsPanel = document.getElementById('settings-panel');
   const closeSettingsButton = document.getElementById('close-settings-button');
+  
+  // These elements are hidden or removed from the UI but we keep references for compatibility
   const voiceSelect = document.getElementById('voice-select');
-  const rateSlider = document.getElementById('rate-slider');
-  const pitchSlider = document.getElementById('pitch-slider');
-  const volumeSlider = document.getElementById('volume-slider');
-  const rateValue = document.getElementById('rate-value');
-  const pitchValue = document.getElementById('pitch-value');
-  const volumeValue = document.getElementById('volume-value');
-  const testVoiceButton = document.getElementById('test-voice-button');
+  
+  // We don't need references to these removed elements anymore
+  // const rateSlider = document.getElementById('rate-slider');
+  // const pitchSlider = document.getElementById('pitch-slider');
+  // const volumeSlider = document.getElementById('volume-slider');
+  // const rateValue = document.getElementById('rate-value');
+  // const pitchValue = document.getElementById('pitch-value');
+  // const volumeValue = document.getElementById('volume-value');
+  // const testVoiceButton = document.getElementById('test-voice-button');
   
   // Initialize voice settings
   function initializeVoiceSettings() {
-    // Set Kokoro TTS settings
-    const kokoroEnabledCheckbox = document.getElementById('kokoro-enabled-checkbox');
-    const kokoroModelSelect = document.getElementById('kokoro-model-select');
-    const kokoroVoiceSelect = document.getElementById('kokoro-voice-select');
-    const kokoroVoiceModelSelect = document.getElementById('kokoro-voice-model-select');
-    const kokoroSpeakerSelect = document.getElementById('kokoro-speaker-select');
+    // Set OpenVoice TTS settings
+    const openVoiceEnabledCheckbox = document.getElementById('openvoice-enabled-checkbox');
+    const openVoiceModelSelect = document.getElementById('openvoice-model-select');
+    const openVoiceSpeakerSelect = document.getElementById('openvoice-speaker-select');
     
-    kokoroEnabledCheckbox.checked = ttsHandler.kokoroEnabled;
+    // Always set as checked and disabled
+    openVoiceEnabledCheckbox.checked = true;
+    openVoiceEnabledCheckbox.disabled = true;
     
-    // Set selected Kokoro voice (language)
-    if (ttsHandler.kokoroVoice) {
-      const kokoroVoiceOptions = kokoroVoiceSelect.options;
-      for (let i = 0; i < kokoroVoiceOptions.length; i++) {
-        if (kokoroVoiceOptions[i].value === ttsHandler.kokoroVoice) {
-          kokoroVoiceSelect.selectedIndex = i;
-          break;
-        }
-      }
+    // The browser TTS section is now hidden via HTML
+    
+    // Update the checkbox label to indicate it's using local TTS
+    const checkboxLabel = openVoiceEnabledCheckbox.nextElementSibling;
+    if (checkboxLabel && checkboxLabel.tagName === 'LABEL') {
+      checkboxLabel.textContent = 'Use Local TTS (system voices)';
     }
     
-    // Set selected Kokoro model
-    if (ttsHandler.kokoroModel && kokoroModelSelect.querySelector(`option[value="${ttsHandler.kokoroModel}"]`)) {
-      kokoroModelSelect.value = ttsHandler.kokoroModel;
+    // Add a note that only local TTS is available
+    const noteElement = document.createElement('div');
+    noteElement.innerHTML = '<p style="margin: 10px 0; color: #3498db;">Using local system voices exclusively. Web speech is disabled.</p>';
+    openVoiceEnabledCheckbox.parentNode.appendChild(noteElement);
+    
+    // Update the test button label
+    const testButton = document.getElementById('test-openvoice-button');
+    if (testButton) {
+      testButton.textContent = 'Test Local TTS';
     }
     
-    // Set selected Kokoro voice model
-    if (ttsHandler.kokoroVoiceModel && kokoroVoiceModelSelect.querySelector(`option[value="${ttsHandler.kokoroVoiceModel}"]`)) {
-      kokoroVoiceModelSelect.value = ttsHandler.kokoroVoiceModel;
+    // Set selected OpenVoice model
+    if (ttsHandler.openVoiceModel && openVoiceModelSelect.querySelector(`option[value="${ttsHandler.openVoiceModel}"]`)) {
+      openVoiceModelSelect.value = ttsHandler.openVoiceModel;
     }
     
-    // Set selected Kokoro speaker
-    if (ttsHandler.kokoroSpeaker && kokoroSpeakerSelect.querySelector(`option[value="${ttsHandler.kokoroSpeaker}"]`)) {
-      kokoroSpeakerSelect.value = ttsHandler.kokoroSpeaker;
+    // Set selected OpenVoice speaker
+    if (ttsHandler.openVoiceSpeaker && openVoiceSpeakerSelect.querySelector(`option[value="${ttsHandler.openVoiceSpeaker}"]`)) {
+      openVoiceSpeakerSelect.value = ttsHandler.openVoiceSpeaker;
     }
     
-    // Populate browser voice select dropdown for TTS
-    const voices = ttsHandler.getVoices();
-    if (voices.length > 0) {
+    // Clear browser voice select dropdown if it exists
+    if (voiceSelect) {
       voiceSelect.innerHTML = '';
-      voices.forEach((voice, index) => {
-        const option = document.createElement('option');
-        option.value = index;
-        option.textContent = `${voice.name} (${voice.lang})`;
-        if (voice === ttsHandler.voice) {
-          option.selected = true;
-        }
-        voiceSelect.appendChild(option);
-      });
+      voiceSelect.innerHTML = '<option value="">Web TTS not available</option>';
     }
     
-    // Set slider values from TTS handler
-    rateSlider.value = ttsHandler.rate;
-    pitchSlider.value = ttsHandler.pitch;
-    volumeSlider.value = ttsHandler.volume;
-    
-    // Update displayed values
-    rateValue.textContent = ttsHandler.rate.toFixed(1);
-    pitchValue.textContent = ttsHandler.pitch.toFixed(1);
-    volumeValue.textContent = ttsHandler.volume.toFixed(1);
+    // We've removed the sliders from the UI
+    // No need to set their values anymore
     
     // Populate STT language dropdown
     const sttLanguageSelect = document.getElementById('stt-language-select');
@@ -155,66 +399,80 @@ document.addEventListener('DOMContentLoaded', () => {
     const modelNameDisplay = document.getElementById('model-name-display');
     modelNameDisplay.textContent = MODEL;
     
-    // Load Kokoro models and voices if available
-    loadKokoroOptions();
+    // Load OpenVoice voices if available
+    loadOpenVoiceOptions();
   }
   
-  // Helper function to load speakers for current model, voice and voice model
-  async function loadSpeakersForCurrentSettings() {
-    const kokoroSpeakerSelect = document.getElementById('kokoro-speaker-select');
+  // Function to load available OpenVoice voices from server
+  async function loadOpenVoiceOptions() {
+    const openVoiceModelSelect = document.getElementById('openvoice-model-select');
+    const openVoiceSpeakerSelect = document.getElementById('openvoice-speaker-select');
     
-    try {
-      // Try to fetch available speakers for the current settings
-      const speakersResponse = await fetch(`${ttsHandler.kokoroURL}/speakers?model=${ttsHandler.kokoroModel}&voice=${ttsHandler.kokoroVoice}&voice_model=${ttsHandler.kokoroVoiceModel}`, {
-        method: 'GET'
-      }).catch(error => {
-        console.warn('Failed to fetch Kokoro speakers:', error);
-        return null;
-      });
-      
-      if (speakersResponse && speakersResponse.ok) {
-        const speakersData = await speakersResponse.json();
-        
-        // Clear existing options except default
-        while (kokoroSpeakerSelect.options.length > 1) {
-          kokoroSpeakerSelect.remove(1);
-        }
-        
-        // Add available speakers
-        if (speakersData.speakers && Array.isArray(speakersData.speakers)) {
-          speakersData.speakers.forEach(speaker => {
-            const option = document.createElement('option');
-            option.value = speaker.id || speaker.name;
-            option.textContent = speaker.name || speaker.id;
-            kokoroSpeakerSelect.appendChild(option);
-          });
-          
-          // Select first speaker
-          if (speakersData.speakers.length > 0) {
-            const firstSpeaker = speakersData.speakers[0].id || speakersData.speakers[0].name;
-            kokoroSpeakerSelect.value = firstSpeaker;
-            ttsHandler.setKokoroSpeaker(firstSpeaker);
-          }
-        }
-      }
-    } catch (error) {
-      console.error('Error loading Kokoro speakers:', error);
-    }
-  }
-  
-  // Function to load available Kokoro models and voices from server
-  async function loadKokoroOptions() {
-    const kokoroModelSelect = document.getElementById('kokoro-model-select');
-    const kokoroVoiceModelSelect = document.getElementById('kokoro-voice-model-select');
-    const kokoroSpeakerSelect = document.getElementById('kokoro-speaker-select');
-    
-    if (ttsHandler.kokoroEnabled) {
+    if (ttsHandler.openVoiceEnabled) {
       try {
-        // Try to fetch available models from Kokoro server
-        const modelsResponse = await fetch(`${ttsHandler.kokoroURL}/models`, {
+        // Try to fetch available voices from OpenVoice server
+        const voicesResponse = await fetch(`${ttsHandler.openVoiceURL}/voices`, {
           method: 'GET'
         }).catch(error => {
-          console.warn('Failed to fetch Kokoro models:', error);
+          console.warn('Failed to fetch OpenVoice voices:', error);
+          return null;
+        });
+        
+        if (voicesResponse && voicesResponse.ok) {
+          const voicesData = await voicesResponse.json();
+          
+          // Clear existing options except default
+          while (openVoiceSpeakerSelect.options.length > 0) {
+            openVoiceSpeakerSelect.remove(0);
+          }
+          
+          // Add available voices
+          if (voicesData.voices && Array.isArray(voicesData.voices)) {
+            voicesData.voices.forEach(voice => {
+              const option = document.createElement('option');
+              option.value = voice.id;
+              option.textContent = voice.name;
+              openVoiceSpeakerSelect.appendChild(option);
+            });
+            
+            // Select current voice if it exists in the list
+            if (ttsHandler.openVoiceSpeaker) {
+              for (let i = 0; i < openVoiceSpeakerSelect.options.length; i++) {
+                if (openVoiceSpeakerSelect.options[i].value === ttsHandler.openVoiceSpeaker) {
+                  openVoiceSpeakerSelect.selectedIndex = i;
+                  break;
+                }
+              }
+            }
+          } else {
+            // Add default options if no voices are returned
+            const defaultVoices = [
+              { id: 'female_1', name: 'Female Voice 1' },
+              { id: 'male_1', name: 'Male Voice 1' },
+              { id: 'female_2', name: 'Female Voice 2' },
+              { id: 'male_2', name: 'Male Voice 2' }
+            ];
+            
+            defaultVoices.forEach(voice => {
+              const option = document.createElement('option');
+              option.value = voice.id;
+              option.textContent = voice.name;
+              openVoiceSpeakerSelect.appendChild(option);
+            });
+            
+            // Select the first voice by default
+            if (openVoiceSpeakerSelect.options.length > 0) {
+              openVoiceSpeakerSelect.selectedIndex = 0;
+              ttsHandler.setOpenVoiceSpeaker(openVoiceSpeakerSelect.value);
+            }
+          }
+        }
+        
+        // Try to fetch available models from OpenVoice server
+        const modelsResponse = await fetch(`${ttsHandler.openVoiceURL}/models`, {
+          method: 'GET'
+        }).catch(error => {
+          console.warn('Failed to fetch OpenVoice models:', error);
           return null;
         });
         
@@ -222,8 +480,8 @@ document.addEventListener('DOMContentLoaded', () => {
           const modelsData = await modelsResponse.json();
           
           // Clear existing options except default
-          while (kokoroModelSelect.options.length > 1) {
-            kokoroModelSelect.remove(1);
+          while (openVoiceModelSelect.options.length > 0) {
+            openVoiceModelSelect.remove(0);
           }
           
           // Add available models
@@ -232,96 +490,38 @@ document.addEventListener('DOMContentLoaded', () => {
               const option = document.createElement('option');
               option.value = model.id || model.name;
               option.textContent = model.name || model.id;
-              kokoroModelSelect.appendChild(option);
+              openVoiceModelSelect.appendChild(option);
             });
-            
-            // Select current model if it exists in the list
-            if (ttsHandler.kokoroModel) {
-              for (let i = 0; i < kokoroModelSelect.options.length; i++) {
-                if (kokoroModelSelect.options[i].value === ttsHandler.kokoroModel) {
-                  kokoroModelSelect.selectedIndex = i;
-                  break;
-                }
+          }
+          
+          // Add default option if no models returned
+          if (openVoiceModelSelect.options.length === 0) {
+            const option = document.createElement('option');
+            option.value = 'default';
+            option.textContent = 'Default';
+            openVoiceModelSelect.appendChild(option);
+          }
+          
+          // Select current model if it exists in the list
+          if (ttsHandler.openVoiceModel) {
+            let modelFound = false;
+            for (let i = 0; i < openVoiceModelSelect.options.length; i++) {
+              if (openVoiceModelSelect.options[i].value === ttsHandler.openVoiceModel) {
+                openVoiceModelSelect.selectedIndex = i;
+                modelFound = true;
+                break;
               }
             }
-          }
-        }
-        
-        // Try to fetch available voice models for the current language
-        const voiceModelsResponse = await fetch(`${ttsHandler.kokoroURL}/voice_models?lang=${ttsHandler.kokoroVoice}`, {
-          method: 'GET'
-        }).catch(error => {
-          console.warn('Failed to fetch Kokoro voice models:', error);
-          return null;
-        });
-        
-        if (voiceModelsResponse && voiceModelsResponse.ok) {
-          const voiceModelsData = await voiceModelsResponse.json();
-          
-          // Clear existing options except default
-          while (kokoroVoiceModelSelect.options.length > 1) {
-            kokoroVoiceModelSelect.remove(1);
-          }
-          
-          // Add available voice models
-          if (voiceModelsData.voice_models && Array.isArray(voiceModelsData.voice_models)) {
-            voiceModelsData.voice_models.forEach(voiceModel => {
-              const option = document.createElement('option');
-              option.value = voiceModel.id || voiceModel.name;
-              option.textContent = voiceModel.name || voiceModel.id;
-              kokoroVoiceModelSelect.appendChild(option);
-            });
             
-            // Select current voice model if it exists in the list
-            if (ttsHandler.kokoroVoiceModel) {
-              for (let i = 0; i < kokoroVoiceModelSelect.options.length; i++) {
-                if (kokoroVoiceModelSelect.options[i].value === ttsHandler.kokoroVoiceModel) {
-                  kokoroVoiceModelSelect.selectedIndex = i;
-                  break;
-                }
-              }
-            }
-          }
-        }
-        
-        // Try to fetch available speakers for the current model and voice model
-        const speakersResponse = await fetch(`${ttsHandler.kokoroURL}/speakers?model=${ttsHandler.kokoroModel}&voice=${ttsHandler.kokoroVoice}&voice_model=${ttsHandler.kokoroVoiceModel}`, {
-          method: 'GET'
-        }).catch(error => {
-          console.warn('Failed to fetch Kokoro speakers:', error);
-          return null;
-        });
-        
-        if (speakersResponse && speakersResponse.ok) {
-          const speakersData = await speakersResponse.json();
-          
-          // Clear existing options except default
-          while (kokoroSpeakerSelect.options.length > 1) {
-            kokoroSpeakerSelect.remove(1);
-          }
-          
-          // Add available speakers
-          if (speakersData.speakers && Array.isArray(speakersData.speakers)) {
-            speakersData.speakers.forEach(speaker => {
-              const option = document.createElement('option');
-              option.value = speaker.id || speaker.name;
-              option.textContent = speaker.name || speaker.id;
-              kokoroSpeakerSelect.appendChild(option);
-            });
-            
-            // Select current speaker if it exists in the list
-            if (ttsHandler.kokoroSpeaker) {
-              for (let i = 0; i < kokoroSpeakerSelect.options.length; i++) {
-                if (kokoroSpeakerSelect.options[i].value === ttsHandler.kokoroSpeaker) {
-                  kokoroSpeakerSelect.selectedIndex = i;
-                  break;
-                }
-              }
+            // If model not found, select the first one
+            if (!modelFound && openVoiceModelSelect.options.length > 0) {
+              openVoiceModelSelect.selectedIndex = 0;
+              ttsHandler.setOpenVoiceModel(openVoiceModelSelect.value);
             }
           }
         }
       } catch (error) {
-        console.error('Error loading Kokoro options:', error);
+        console.error('Error loading OpenVoice options:', error);
       }
     }
   }
@@ -336,156 +536,78 @@ document.addEventListener('DOMContentLoaded', () => {
     settingsPanel.style.display = 'none';
   });
   
-  // Kokoro TTS event listeners
-  const kokoroEnabledCheckbox = document.getElementById('kokoro-enabled-checkbox');
-  const kokoroModelSelect = document.getElementById('kokoro-model-select');
-  const kokoroVoiceSelect = document.getElementById('kokoro-voice-select');
-  const kokoroVoiceModelSelect = document.getElementById('kokoro-voice-model-select');
-  const kokoroSpeakerSelect = document.getElementById('kokoro-speaker-select');
+  // OpenVoice TTS event listeners
+  const openVoiceEnabledCheckbox = document.getElementById('openvoice-enabled-checkbox');
+  const openVoiceModelSelect = document.getElementById('openvoice-model-select');
+  const openVoiceSpeakerSelect = document.getElementById('openvoice-speaker-select');
   
-  kokoroEnabledCheckbox.addEventListener('change', () => {
-    ttsHandler.setKokoroEnabled(kokoroEnabledCheckbox.checked);
-    // Load Kokoro options if enabled
-    if (kokoroEnabledCheckbox.checked) {
-      loadKokoroOptions();
-    }
-  });
-  
-  kokoroModelSelect.addEventListener('change', async () => {
-    ttsHandler.setKokoroModel(kokoroModelSelect.value);
+  openVoiceEnabledCheckbox.addEventListener('change', () => {
+    const enabled = openVoiceEnabledCheckbox.checked;
+    console.log('Setting OpenVoice enabled to:', enabled);
+    ttsHandler.setOpenVoiceEnabled(enabled);
     
-    // When model changes, refresh voice models and speakers
-    if (ttsHandler.kokoroEnabled) {
-      // First, reload voice models for the current language
-      try {
-        const voiceModelsResponse = await fetch(`${ttsHandler.kokoroURL}/voice_models?lang=${ttsHandler.kokoroVoice}&model=${kokoroModelSelect.value}`, {
-          method: 'GET'
-        }).catch(error => {
-          console.warn('Failed to fetch Kokoro voice models:', error);
-          return null;
-        });
-        
-        if (voiceModelsResponse && voiceModelsResponse.ok) {
-          const voiceModelsData = await voiceModelsResponse.json();
-          
-          // Clear existing options except default
-          while (kokoroVoiceModelSelect.options.length > 1) {
-            kokoroVoiceModelSelect.remove(1);
-          }
-          
-          // Add available voice models
-          if (voiceModelsData.voice_models && Array.isArray(voiceModelsData.voice_models)) {
-            voiceModelsData.voice_models.forEach(voiceModel => {
-              const option = document.createElement('option');
-              option.value = voiceModel.id || voiceModel.name;
-              option.textContent = voiceModel.name || voiceModel.id;
-              kokoroVoiceModelSelect.appendChild(option);
-            });
-            
-            // Select first voice model
-            if (voiceModelsData.voice_models.length > 0) {
-              const firstVoiceModel = voiceModelsData.voice_models[0].id || voiceModelsData.voice_models[0].name;
-              kokoroVoiceModelSelect.value = firstVoiceModel;
-              ttsHandler.setKokoroVoiceModel(firstVoiceModel);
-            }
-          }
-        }
-      } catch (error) {
-        console.error('Error loading Kokoro voice models:', error);
-      }
-      
-      // Then load speakers for the new settings
-      await loadSpeakersForCurrentSettings();
+    // Load OpenVoice options if enabled
+    if (enabled) {
+      loadOpenVoiceOptions();
     }
-  });
-  
-  kokoroVoiceSelect.addEventListener('change', async () => {
-    ttsHandler.setKokoroVoice(kokoroVoiceSelect.value);
     
-    // When voice (language) changes, fetch available voice models for this language
-    if (ttsHandler.kokoroEnabled) {
-      try {
-        const voiceModelsResponse = await fetch(`${ttsHandler.kokoroURL}/voice_models?lang=${kokoroVoiceSelect.value}`, {
-          method: 'GET'
-        }).catch(error => {
-          console.warn('Failed to fetch Kokoro voice models:', error);
-          return null;
-        });
-        
-        if (voiceModelsResponse && voiceModelsResponse.ok) {
-          const voiceModelsData = await voiceModelsResponse.json();
-          
-          // Clear existing options except default
-          while (kokoroVoiceModelSelect.options.length > 1) {
-            kokoroVoiceModelSelect.remove(1);
-          }
-          
-          // Add available voice models
-          if (voiceModelsData.voice_models && Array.isArray(voiceModelsData.voice_models)) {
-            voiceModelsData.voice_models.forEach(voiceModel => {
-              const option = document.createElement('option');
-              option.value = voiceModel.id || voiceModel.name;
-              option.textContent = voiceModel.name || voiceModel.id;
-              kokoroVoiceModelSelect.appendChild(option);
-            });
-            
-            // Select first voice model
-            if (voiceModelsData.voice_models.length > 0) {
-              const firstVoiceModel = voiceModelsData.voice_models[0].id || voiceModelsData.voice_models[0].name;
-              kokoroVoiceModelSelect.value = firstVoiceModel;
-              ttsHandler.setKokoroVoiceModel(firstVoiceModel);
-              
-              // Update available speakers for the new voice and voice model
-              await loadSpeakersForCurrentSettings();
-            }
-          }
-        }
-      } catch (error) {
-        console.error('Error loading Kokoro voice models:', error);
-      }
-    }
+    // Log the new status
+    console.log('OpenVoice enabled status is now:', ttsHandler.openVoiceEnabled);
   });
   
-  kokoroVoiceModelSelect.addEventListener('change', async () => {
-    ttsHandler.setKokoroVoiceModel(kokoroVoiceModelSelect.value);
+  openVoiceModelSelect.addEventListener('change', () => {
+    const model = openVoiceModelSelect.value;
+    ttsHandler.setOpenVoiceModel(model);
     
-    // When voice model changes, update available speakers
-    if (ttsHandler.kokoroEnabled) {
-      await loadSpeakersForCurrentSettings();
+    // Also adjust the rate based on model
+    if (model === 'slow') {
+      ttsHandler.rate = 0.7;
+    } else if (model === 'fast') {
+      ttsHandler.rate = 1.5;
+    } else {
+      ttsHandler.rate = 1.0;
     }
+    
+    console.log(`Changed speech model to ${model}, rate is now ${ttsHandler.rate}`);
   });
   
-  kokoroSpeakerSelect.addEventListener('change', () => {
-    ttsHandler.setKokoroSpeaker(kokoroSpeakerSelect.value);
+  openVoiceSpeakerSelect.addEventListener('change', () => {
+    ttsHandler.setOpenVoiceSpeaker(openVoiceSpeakerSelect.value);
   });
   
-  // Browser TTS event listeners
-  voiceSelect.addEventListener('change', () => {
-    const selectedIndex = parseInt(voiceSelect.value);
-    ttsHandler.setVoice(selectedIndex);
+  // Test OpenVoice TTS button
+  const testOpenVoiceButton = document.getElementById('test-openvoice-button');
+  testOpenVoiceButton.addEventListener('click', () => {
+    console.log('Testing local TTS with current settings...');
+    // Save current enabled state
+    const wasEnabled = ttsHandler.enabled;
+    
+    // Force enable for testing
+    ttsHandler.enabled = true;
+    
+    // Test with a short sample
+    ttsHandler.speak('This is a test of the local text-to-speech system. Hello, I am Headroom!');
+    
+    // Restore original settings after testing
+    setTimeout(() => {
+      ttsHandler.enabled = wasEnabled;
+    }, 100);
+    
+    return false; // Prevent default
   });
   
-  rateSlider.addEventListener('input', () => {
-    const value = parseFloat(rateSlider.value);
-    ttsHandler.setRate(value);
-    rateValue.textContent = value.toFixed(1);
-  });
+  // We don't need browser TTS event listeners since we've removed that UI
+  // But let's keep the code with checks to prevent errors
   
-  pitchSlider.addEventListener('input', () => {
-    const value = parseFloat(pitchSlider.value);
-    ttsHandler.setPitch(value);
-    pitchValue.textContent = value.toFixed(1);
-  });
+  if (voiceSelect) {
+    voiceSelect.addEventListener('change', () => {
+      const selectedIndex = parseInt(voiceSelect.value);
+      ttsHandler.setVoice(selectedIndex);
+    });
+  }
   
-  volumeSlider.addEventListener('input', () => {
-    const value = parseFloat(volumeSlider.value);
-    ttsHandler.setVolume(value);
-    volumeValue.textContent = value.toFixed(1);
-  });
-  
-  testVoiceButton.addEventListener('click', () => {
-    ttsHandler.speak('This is a test of the current voice settings. Hello, I am Headroom!');
-  });
+  // We've removed these UI elements so we shouldn't try to add listeners
+  // But adding null checks to prevent errors
   
   // STT settings event listeners
   const sttLanguageSelect = document.getElementById('stt-language-select');
@@ -610,6 +732,11 @@ document.addEventListener('DOMContentLoaded', () => {
     const userMessage = messageInput.value.trim();
     if (!userMessage) return;
     
+    // Stop any currently playing speech when a new message is sent
+    if (ttsHandler && typeof ttsHandler.stopSpeaking === 'function') {
+      ttsHandler.stopSpeaking();
+    }
+    
     // Add user message to chat interface and history
     addMessageToChat(userMessage, 'user');
     conversationHistory.push({ role: 'user', content: userMessage });
@@ -691,19 +818,75 @@ document.addEventListener('DOMContentLoaded', () => {
   
   // Function to reset conversation
   function resetConversation() {
+    console.log('Resetting conversation');
+    
+    // Clear chat history and UI
     conversationHistory = [
       { role: 'system', content: SYSTEM_PROMPT },
-      { role: 'assistant', content: 'Hello! I\'m Headroom. How can I assist you today?' }
+      { role: 'assistant', content: initialMessage }
     ];
     chatMessages.innerHTML = '';
-    addMessageToChat('Hello! I\'m Headroom. How can I assist you today?', 'bot');
+    
+    // Add welcome message to chat
+    addMessageToChat(initialMessage, 'bot');
+    
+    // Speak the initial message - always enable TTS for this
+    // Stop any currently playing speech first
+    if (ttsHandler && typeof ttsHandler.stopSpeaking === 'function') {
+      ttsHandler.stopSpeaking();
+    }
+    
+    console.log('Speaking welcome message after reset');
+    
+    // Force TTS to be temporarily enabled for this message
+    const originalEnabled = ttsHandler.enabled;
+    console.log('Original TTS enabled state before welcome message:', originalEnabled);
+    
+    // Force enable TTS just for this message
+    ttsHandler.enabled = true;
+    
+    // Ensure the TTS button reflects the correct state even with our temporary override
+    const toggleAudioBtn = document.getElementById('toggle-audio-button');
+    const buttonText = originalEnabled ? 'Disable Audio Response' : 'Enable Audio Response';
+    toggleAudioBtn.textContent = buttonText;
+    console.log('Preserved button state as:', buttonText, 'while forcing TTS on');
+    
+    setTimeout(() => {
+      // Speak the welcome message with a forced enable
+      console.log('Speaking welcome message with forced TTS enable');
+      
+      speakText(initialMessage)
+        .then(() => {
+          // Important: restore original TTS setting after speaking
+          console.log('Welcome message speech completed, restoring TTS to:', originalEnabled);
+          ttsHandler.enabled = originalEnabled;
+          ttsEnabled = originalEnabled;
+          
+          // Make sure button text is consistent with restored state
+          toggleAudioBtn.textContent = originalEnabled ? 'Disable Audio Response' : 'Enable Audio Response';
+        })
+        .catch(err => {
+          console.error('Error during welcome message speech:', err);
+          // Still restore original settings
+          ttsHandler.enabled = originalEnabled;
+          ttsEnabled = originalEnabled;
+          toggleAudioBtn.textContent = originalEnabled ? 'Disable Audio Response' : 'Enable Audio Response';
+        });
+    }, 800); // Longer delay to ensure UI is ready
   }
   
   // Function to speak text using TTS
   async function speakText(text) {
-    if (!ttsEnabled) return;
+    console.log(`speakText called with text: "${text.substring(0, 30)}..."`, 
+                `ttsEnabled: ${ttsEnabled}, handler enabled: ${ttsHandler.enabled}`);
+    
+    if (!ttsEnabled) {
+      console.log('TTS is disabled, not speaking');
+      return;
+    }
     
     // Use our TTS handler class
+    console.log('Calling TTS handler speak method');
     return ttsHandler.speak(text);
   }
 });
